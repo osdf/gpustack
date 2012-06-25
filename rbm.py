@@ -17,8 +17,8 @@ class RBM(Layer):
         super(RBM, self).__init__(shape=shape, activ=activ, params=params)
 
     def __repr__(self):
-        vrep = str(self.H).split()[1]
-        hrep = str(self.V).split()[1]
+        hrep = str(self.H).split()[1]
+        vrep = str(self.V).split()[1]
         rep = "RBM-%s-%s-%s"%(vrep, hrep, self.shape)
         return rep
 
