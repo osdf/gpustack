@@ -74,6 +74,17 @@ def gaussian(data, wm, bias, sampling=False):
         sample = None
     return suff, sample
 
+def gauss(data, wm, bias, prec, sampling=False):
+    """A gauss with given diagonal precision
+    _prec_ (better: _prec_ is interpreted as square
+    root of a diagonal precision.
+    """
+    suff = gpu.dot(data, wm) + bias
+    if sampling:
+        sample = suff + gpu.randn(suff.shape)/prec
+    else:
+        sample = None
+    return suff, sample
 
 def _gaussian(data, wm, bias, sampling=False):
     """CPU version."""
@@ -133,5 +144,6 @@ cpu_table = {
 match_table = {
         bernoulli: gpu.logistic,
         gaussian: idnty,
-        nrelu: relu 
+        nrelu: relu,
+        gauss: idnty
         }
