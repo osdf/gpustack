@@ -35,7 +35,7 @@ class RBM(Layer):
         pt_params = gzeros(self.m_end + self.shape[1] + 2*self.shape[0])
         pt_params[:self.m_end] = init_var * gpu.randn(self.m_end)
         pt_params[self.m_end:-self.shape[0]] = init_bias
-        pt_params[-self.shape[0]] = 1.
+        pt_params[-self.shape[0]:] = 1.
 
         self.H = H
         self.activ = match_table[H]
@@ -92,7 +92,7 @@ class RBM(Layer):
         # Note the negative sign: the gradient is 
         # supposed to point into 'wrong' direction.
         g[:m_end] = (-1./n)*gdot((inputs*prec).T, h1).ravel()
-        g[:m_end] += (1./n)*gdot((v2*prec).T, h2).ravel()
+        g[:m_end] += (1./n)*gdot((v_sampled*prec).T, h2).ravel()
         g[:m_end] += l2*params[:self.m_end]
 
         g[m_end:m_end+H] = -h1.mean(axis=0)
