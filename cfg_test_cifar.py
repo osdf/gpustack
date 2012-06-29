@@ -27,7 +27,7 @@ l1 = {
         "type": GradientDescent
         ,"steprate": 1e-5
         ,"momentum": 0.9
-        ,"iargs": (utils.inpt_source,)
+        ,"iargs": (utils.cycle_inpt,)
         ,"btsz": 128
         ,"epochs": 10
     }
@@ -42,7 +42,7 @@ sm = {
         "type": GradientDescent
         ,"steprate": 1e-4
         ,"momentum": 0.9
-        ,"iargs": (utils.in_source, utils.trgt_source)
+        ,"iargs": (utils.cycle_inpt, utils.cycle_trgt)
         ,"btsz": 128
         ,"epochs": 10
     }
