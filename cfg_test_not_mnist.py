@@ -19,7 +19,7 @@ lab="test_not_mnist.py"
 
 l1 = {
     "type": rbm.RBM
-    ,"units": 512
+    ,"units": 1024
     ,"activ": None
     ,"opt": {
         "type": GradientDescent
@@ -34,7 +34,7 @@ l1 = {
 
 l2 = {
     "type": rbm.RBM
-    ,"units": 512
+    ,"units": 1024
     ,"activ": None
     ,"opt": {
         "type": GradientDescent
@@ -49,7 +49,7 @@ l2 = {
 
 l3 = {
     "type": rbm.RBM
-    ,"units": 2048
+    ,"units": 1024
     ,"activ": None
     ,"opt": {
         "type": GradientDescent
@@ -78,17 +78,17 @@ sm = {
     }
 }
 
-stack = (l1, l2, l3, sm)
+stack = (l1, l1, l1, l1, sm)
 model = {
     "stack": stack,
     "score": losses.xe,
     "opt": {
         "type": GradientDescent
-        ,"steprate": 5e-4
+        ,"steprate": 2.5e-3
         ,"momentum": 0.9
         ,"iargs": (utils.cycle_inpt, utils.cycle_trgt)
         ,"btsz": 128
-        ,"epochs": 100 * 391
+        ,"epochs": 500 * 391
         ,"stop": 391
     }
 }
