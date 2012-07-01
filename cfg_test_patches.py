@@ -16,7 +16,7 @@ import gnumpy
 from climin.gd import GradientDescent
 
 
-lab="test_cifar.py"
+lab="test_patches.py"
 
 l1 = {
     "type": tae.TAE
@@ -50,4 +50,9 @@ sm = {
 
 stack = (sm,)
 
-model = {"stack": stack, "whiten":True, "covered":0.99}
+evals = ("evaluate_liberty_64x64.h5", "evaluate_notredame_64x64.h5", "evaluate_yosemite_64x64.h5")
+dist = ("L1", "L2", "COSINE")
+norms = ("l1", "l2", "id")
+
+model = {"stack": stack, "whiten":True, "covered":0.99,
+        "evals": evals, "dist": dist, "norms": norms}
