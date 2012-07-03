@@ -1,8 +1,10 @@
 """
+An example for using the framework.
+Ties together logging, datasethandling, dispatching
+and the training. 
+
+Shown on the exciting MNIST data.
 """
-
-
-import numpy as np
 
 
 from stack import Stack
@@ -24,9 +26,14 @@ def run(schedule):
     valid = dset["validation"]
     test = dset["test"]
 
+    # "train" and "valid" are fixed keywords
+    # only use "valid" if a validation set is available
     schedule["train"] = (train["inputs"], train["targets"])
     schedule["valid"] = (valid["inputs"], valid["targets"])
 
+    # "eval" is another fixed keyword.
+    # After every epoch, some evaluation is run over
+    # the specified datasets.
     schedule["eval"] = ["train", "valid"]
 
     schedule["logging"] = log_queue(log_to=depot)
