@@ -107,11 +107,3 @@ class RBM(Layer):
         g[-V:] += (1./n)*(gsum(2*prec*v_sampled*(params[m_end:m_end+V] - v_sampled), axis=0) + gsum(gdot(v_sampled.T, h2)*wm, axis=1))
 
         return g
-
-    def _reconstruction(self, params, inputs, l2=1e-6, **kwargs):
-        """
-        """
-        _params = params.as_numpy_array()
-        _h1, _ = cpu_table[self.H](inputs, wm=_params[:self.m_end].reshape(self.shape), bias=_params[self.m_end:-self.shape[0]])
-        _v2, _ = cpu_table[self.V](_h1, wm=_params[:self.m_end].reshape(self.shape).T, bias=_params[-self.shape[0]:])
-        return ((inputs - _v2)**2).mean()
