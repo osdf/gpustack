@@ -56,13 +56,31 @@ def cycle_trgt(targets, btsz, **kwargs):
 
 
 def jump(frm, to, when):
-    i=0
+    i = 0
     while True:
         if i >= when:
             yield to
         else:
             yield frm
             i = i+1
+
+
+def lin_inc(frm, to, step, end):
+    i = 0
+    diff = to - frm
+    delta = end/(1.0*step)
+    inc = diff/delta
+    # minus inc handels divmod/i=0 case.
+    strt = frm - inc
+    while True:
+        if i >= end:
+            yield to
+        else:
+            d, r = divmod(i, step)
+            if r == 0:
+                strt += inc
+            yield strt
+            i = i + 1
 
 
 def range_inpt(inputs, btsz, **kwargs):
