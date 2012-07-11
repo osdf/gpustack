@@ -124,26 +124,27 @@ def Drelu(x):
 
 
 diff_table = {
-        gpu.logistic: Dsigmoid,
-        gpu.tanh: Dtanh,
-        idnty: Didnty,
-        relu: Drelu
+        gpu.logistic: Dsigmoid
+        ,gpu.tanh: Dtanh
+        ,idnty: Didnty
+        ,relu: Drelu
         }
 
 
 cpu_table = {
-        gpu.logistic: _logistic,
-        gpu.tanh: np.tanh,
-        idnty: idnty,
-        bernoulli: _bernoulli,
-        gaussian: _gaussian,
-        nrelu: _nrelu
+        gpu.logistic: _logistic
+        ,gpu.tanh: np.tanh
+        ,idnty: idnty
+        ,bernoulli: _bernoulli
+        ,gaussian: _gaussian
+        ,nrelu: _nrelu
+        ,relu: relu
         }
 
 
 match_table = {
-        bernoulli: gpu.logistic,
-        gaussian: idnty,
-        nrelu: relu,
-        gauss: idnty
+        bernoulli: gpu.logistic
+        ,gaussian: idnty
+        ,nrelu: relu
+        ,gauss: idnty
         }

@@ -6,10 +6,10 @@ A layer that can be _pretrained_ as an RBM.
 from gnumpy import dot as gdot
 from gnumpy import zeros as gzeros
 import gnumpy as gpu
-
+import numpy as np
 
 from layer import Layer
-from misc import match_table, cpu_table, bernoulli
+from misc import match_table, bernoulli
 
 
 class RBM(Layer):
@@ -24,7 +24,15 @@ class RBM(Layer):
 
     def pt_init(self, H=bernoulli, V=bernoulli, init_var=1e-2, init_bias=0., **kwargs):
         pt_params = gzeros(self.m_end + self.shape[1] + self.shape[0])
-        pt_params[:self.m_end] = init_var * gpu.randn(self.m_end)
+        if init_var is None:
+            print "Using Bengio Init."
+            init_heur = 4*np.sqrt(6./(self.shape[0]+self.shape[1]))
+            pt_params[:self.m_end] = gpu.rand(self.m_end)
+            pt_params[:self.m_end] *= 2
+            pt_params[:self.m_end] -= 1
+            pt_params[:self.m_end] *= init_heur
+        else:
+            pt_params[:self.m_end] = init_var * gpu.randn(self.m_end)
         pt_params[self.m_end:] = init_bias
 
         self.H = H
@@ -32,7 +40,6 @@ class RBM(Layer):
         self.activ = match_table[H]
 
         self.pt_score = self.reconstruction
-        self._pt_score = self._reconstruction
         self.pt_grad = self.grad_cd1
 
         return pt_params
@@ -75,9 +82,3 @@ class RBM(Layer):
         g[-self.shape[0]:] += v2.mean(axis=0)
 
         return g
-
-    def _reconstruction(self, params, inputs, l2=1e-6, **kwargs):
-        _params = params.as_numpy_array()
-        _h1, _ = cpu_table[self.H](inputs, wm=_params[:self.m_end].reshape(self.shape), bias=_params[self.m_end:-self.shape[0]])
-        _v2, _ = cpu_table[self.V](_h1, wm=_params[:self.m_end].reshape(self.shape).T, bias=_params[-self.shape[0]:])
-        return ((inputs - _v2)**2).mean()
