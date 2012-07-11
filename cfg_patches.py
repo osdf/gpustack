@@ -20,22 +20,22 @@ multiplies = 3000
 
 l1 = {
     "type": rbm.RBM
-    ,"units": 2048
+    ,"units": 2*1024
     ,"V": misc.gaussian
     ,"init_var": None
     ,"opt": {
         "type": GradientDescent
-        ,"steprate": 1e-4
-        ,"momentum": utils.jump(0.5, 0.9, 5*multiplies)
+        ,"steprate": 5e-4
+        ,"momentum": utils.jump(0.5, 0.9, 10*multiplies)
         ,"iargs": (utils.cycle_inpt,)
         ,"btsz": btsz 
-        ,"epochs": 6 * multiplies 
+        ,"epochs": 10 * multiplies 
         ,"stop": multiplies
     }
 }
 
 evals = ("evaluate_liberty_64x64.h5",) #, "evaluate_notredame_64x64.h5", "evaluate_yosemite_64x64.h5")
-dist = ("L1", "L2", "COSINE")
+dist = ("L1", "L2")
 norms = ("l1", "l2", "id")
 
 stack = (l1,)

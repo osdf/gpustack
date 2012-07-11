@@ -55,12 +55,12 @@ class RBM(Layer):
 
         return info
 
-    def reconstruction(self, params, inputs, l2=1e-6, **kwargs):
+    def reconstruction(self, params, inputs, **kwargs):
         h1, _ = self.H(inputs, wm=params[:self.m_end].reshape(self.shape), bias=params[self.m_end:-self.shape[0]])
         v2, _ = self.V(h1, wm=params[:self.m_end].reshape(self.shape).T, bias=params[-self.shape[0]:])
         return ((inputs - v2)**2).sum()
 
-    def grad_cd1(self, params, inputs, l2=1e-6, **kwargs):
+    def grad_cd1(self, params, inputs, l2=0., **kwargs):
         g = gzeros(params.shape)
 
         n, _ = inputs.shape
@@ -70,7 +70,8 @@ class RBM(Layer):
         h2, _ = self.H(v2, wm=params[:self.m_end].reshape(self.shape), bias=params[self.m_end:-self.shape[0]])
 
         # Note the negative sign: the gradient is 
-        # supposed to point into 'wrong' direction.
+        # supposed to point into 'wrong' direction,
+        # because the used optimizer likes to minimize.
         g[:self.m_end] = (-1./n)*gdot(inputs.T, h1).ravel()
         g[:self.m_end] += (1./n)*gdot(v2.T, h2).ravel()
         g[:self.m_end] += l2*params[:self.m_end]
