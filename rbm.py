@@ -14,7 +14,7 @@ from misc import match_table, bernoulli
 
 class RBM(Layer):
     def __init__(self, shape, activ=None, params=None, **kwargs):
-        super(RBM, self).__init__(shape=shape, activ=activ, params=params)
+        super(RBM, self).__init__(shape=shape, activ=activ, params=params, **kwargs)
 
     def __repr__(self):
         hrep = str(self.H).split()[1]
