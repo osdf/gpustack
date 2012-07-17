@@ -15,12 +15,15 @@ from losses import loss_table
 
 
 class Layer(object):
-    def __init__(self, shape, activ, params=None, **kwargs):
+    def __init__(self, shape, activ, params=None, dropout=None, **kwargs):
         self.shape = shape
         self.m_end = shape[0]*shape[1]
         self.activ = activ
         self.p = params
         self.size = shape[0]*shape[1] + shape[1]
+        if dropout is not None:
+            self.dropout = dropout
+            self.fprop = self.fprop_dropout
 
     def __repr__(self):
         _score = str(self.score).split()[1]
@@ -44,6 +47,13 @@ class Layer(object):
         delta = gdot(dE_da, params[:self.m_end].reshape(self.shape).T)
         del self.Z
         return delta
+
+    def fprop_dropout(self, params, data):
+        drop = gpu.rand(data.shape) > self.dropout
+        data *= drop
+        self.data = data
+        self.Z = self.activ(gdot(data, params[:self.m_end].reshape(self.shape)) + params[self.m_end:])
+        return self.Z
 
     def pt_init(self, score=None, init_var=1e-2, init_bias=0., **kwargs):
         self.p[:self.m_end] = init_var * gpu.randn(self.m_end)
