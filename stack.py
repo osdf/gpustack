@@ -62,15 +62,17 @@ class Stack(list):
             log = munk.add_keyvalue(self.logging, "layer", i)
 
             stop = opt_schedule["stop"]
-            for j, info in enumerate(opt):
-                if (j+1) % stop == 0:
-                    for e in evals:
-                        info[e] = evals[e](pt_params)
-                    info = replace_gnumpy_data(info)
-                    log.send(info)
+            epochs = opt_schedule["epochs"]
+            if opt_schedule["epochs"] > 0:
+                for j, info in enumerate(opt):
+                    if (j+1) % stop == 0:
+                        for e in evals:
+                            info[e] = evals[e](pt_params)
+                        info = replace_gnumpy_data(info)
+                        log.send(info)
 
-                if (j+1) == opt_schedule["epochs"]:
-                    break
+                    if (j+1) == epochs:
+                        break
 
             info = layer.pt_done(pt_params, **sched)
             log.send(info)
