@@ -65,7 +65,7 @@ def _bernoulli(data, wm, bias, sampling=False):
 
 
 def gaussian(data, wm, bias, sampling=False):
-    """
+    """Gaussian with fixed variance of 1.
     """
     suff = gpu.dot(data, wm) + bias
     if sampling:
@@ -73,6 +73,7 @@ def gaussian(data, wm, bias, sampling=False):
     else:
         sample = None
     return suff, sample
+
 
 def gauss(data, wm, bias, prec, sampling=False):
     """A gauss with given diagonal precision
@@ -86,6 +87,7 @@ def gauss(data, wm, bias, prec, sampling=False):
         sample = None
     return suff, sample
 
+
 def _gaussian(data, wm, bias, sampling=False):
     """CPU version."""
     suff = np.dot(data, wm) + bias
@@ -95,9 +97,9 @@ def _gaussian(data, wm, bias, sampling=False):
         sample = None
     return suff, sample
 
+
 def nrelu(data, wm, bias, sampling=False):
-    """
-    A noisy rectified linear unit.
+    """A noisy rectified linear unit.
     """
     suff = gpu.dot(data, wm) + bias
     suff *= (suff > 0)
@@ -112,7 +114,13 @@ def nrelu(data, wm, bias, sampling=False):
 
 def _nrelu(data, wm, bias, sampling=False):
     """CPU version."""
-    return None, None
+    suff = np.dot(data, wm) + bias
+    suff *= (suff > 0)
+    if sampling:
+        pass
+    else:
+        sample = None
+    return suff, sample
 
 
 def relu(x):

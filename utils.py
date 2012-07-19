@@ -30,7 +30,7 @@ def cycle_inpt(inputs, btsz, **kwargs):
     """
     bgn, end = _cycle(inputs, btsz)
     for idx, idx_p1 in izip(bgn, end):
-        yield garray(inputs[idx:idx_p1].copy())
+        yield garray(inputs[idx:idx_p1])
 
 
 def cycle_noisy_inpt(inputs, btsz, noise, **kwargs):
@@ -185,7 +185,7 @@ def eval_opt(schedule):
             N = inputs.shape[0]
             for idx in xrange(0, N - btsz + 1, btsz):
                 acc += score(wrt, *[arg(idx) for arg in args])
-            return acc/N
+            return acc
 
         evals[e] = loss
     return evals

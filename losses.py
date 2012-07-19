@@ -17,10 +17,10 @@ def ssd(z, targets, weight=0.5, predict=False, error=False, addon=0):
     err = z - targets
     if error:
         # rec. error + first deriv
-        return weight*gpu.mean(err**2) + addon, 2.*weight*err/(n*m)
+        return weight*gpu.sum(err**2)/n + addon, 2.*weight*err/n
     else:
         # only return reconstruction error 
-        return weight*gpu.mean(err**2) + addon
+        return weight*gpu.sum(err**2)/n + addon
 
 
 def mia(z, targets, predict=False, error=False, addon=0):
