@@ -4,6 +4,8 @@ an unsupervised way using a Tied
 AutoEncoder (TAE).
 """
 
+import numpy as np
+
 
 from gnumpy import dot as gdot
 from gnumpy import zeros as gzeros
@@ -25,7 +27,15 @@ class TAE(Layer):
 
     def pt_init(self, score=None, init_var=1e-2, init_bias=0., **kwargs):
         pt_params = gzeros(self.m_end + self.shape[1] + self.shape[0])
-        pt_params[:self.m_end] = init_var * gpu.randn(self.m_end)
+        if init_var is None:
+            init_heur = 4*np.sqrt(6./(self.shape[0]+self.shape[1]))
+            pt_params[:self.m_end] = gpu.rand(self.m_end)
+            pt_params[:self.m_end] *= 2
+            pt_params[:self.m_end] -= 1
+            pt_params[:self.m_end] *= init_heur
+        else:
+            pt_params[:self.m_end] = init_var * gpu.randn(self.m_end)
+
         pt_params[self.m_end:] = init_bias
         self.score = score
         return pt_params

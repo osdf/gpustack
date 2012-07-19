@@ -11,7 +11,6 @@ import gnumpy as gpu
 
 
 from misc import diff_table, cpu_table
-from losses import loss_table
 
 
 class Layer(object):

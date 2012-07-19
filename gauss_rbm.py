@@ -59,7 +59,7 @@ class RBM(Layer):
 
         return info
 
-    def reconstruction(self, params, inputs, l2=1e-6, **kwargs):
+    def reconstruction(self, params, inputs, **kwargs):
         """
         """
         m_end = self.m_end

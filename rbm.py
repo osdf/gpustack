@@ -25,7 +25,6 @@ class RBM(Layer):
     def pt_init(self, H=bernoulli, V=bernoulli, init_var=1e-2, init_bias=0., **kwargs):
         pt_params = gzeros(self.m_end + self.shape[1] + self.shape[0])
         if init_var is None:
-            print "Using Bengio Init."
             init_heur = 4*np.sqrt(6./(self.shape[0]+self.shape[1]))
             pt_params[:self.m_end] = gpu.rand(self.m_end)
             pt_params[:self.m_end] *= 2
