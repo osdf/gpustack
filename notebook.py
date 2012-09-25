@@ -80,6 +80,28 @@ def atom_str(atom):
     return stringed
 
 
+def pick_enable(elm):
+    """
+    """
+    if type(elm) is dict:
+        copy = {}
+        keys = elm.keys()
+        for k in keys:
+            copy[k] = pick_enable(elm[k])
+        return copy
+    
+    if type(elm) is tuple:
+        copy = []
+        for e in elm:
+            copy.append(pick_enable(e))
+        return tuple(copy)
+
+    if type(elm) is types.GeneratorType:
+        return gen_str(elm)
+
+    return elm
+
+
 def prepare(schedule, depot="depot") :
     """
     Prepare things for notebook.
@@ -100,13 +122,14 @@ def prepare(schedule, depot="depot") :
     # experiment may come from two different config files.
     # Instead, hash the schedule.
     to_hash = dict_str(schedule)
+    pick = pick_enable(schedule)
     folder = hashlib.sha1(to_hash).hexdigest()[0:20]
     path = join(depot, folder)
     if not exists(path):
         os.makedirs(path)
         schedfile = join(path, now) + ".schedule"
         with open(schedfile, "w") as f:
-            f.write(json.dumps(to_hash))
+            cPickle.dump(pick, f)
     else:
         print "[NOTEBOOK:prepare] It seems, you are _re_running an experiment."
         print "[NOTEBOOK:prepare] Found already this hash:", folder
@@ -117,5 +140,34 @@ def prepare(schedule, depot="depot") :
     # even though we didn't hash the config file, it is good
     # to know, which config's gave rise to this experiment.
     shutil.copy(schedule["__config__"], path + ".config")
-    print "[NOTEBOOK:prepare] Working on %s\n"%path
+    print "[NOTEBOOK:prepare] Working on %s\n" % path
     return path
+
+
+def reload(depot, folder, tag, layer):
+    """
+    """
+    import dispatch
+    import utils
+    
+    cwd = os.getcwd()
+    path = join(depot, folder)
+    os.chdir(path)
+
+    for f in os.listdir('.'):
+        if f.endswith("schedule"):
+            sched_f = f
+    sched_f = open(sched_f)
+    sched = cPickle.load(sched_f)
+    sched_f.close()
+
+    if layer >= 0:
+        ltype = sched['stack'][layer]['type']
+        params = utils.load_params(tag + ".params")
+        shape = params[layer]['shape']
+        model = ltype.__new__(ltype)
+        model.__init__(shape=shape, **sched)
+        model.reload(params[layer]['params'])
+    os.chdir(cwd)
+
+    return model, sched
