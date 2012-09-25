@@ -20,8 +20,8 @@ class Gated_RBM(Layer):
         hidden = sigmoid(tmp + params[self._bhslice])
 
         # first part of gradients
-        tmp = gdot(hidden, params[self._fhslice].reshape(self._fhshape).T)
-        tmp *= factors 
+        _contrib = gdot(hidden, params[self._fhslice].reshape(self._fhshape).T)
+        tmp = _contrib*factors
         g[self._vfslice] = -gdot(inputs.T, tmp).ravel()
         g[self._fhslice] = -gdot(factors_squared.T, hidden).ravel()
         g[self._bhslice] = -hidden.sum(axis=0)
@@ -29,6 +29,7 @@ class Gated_RBM(Layer):
 
         # inputs no longer needed, overwritten inplace
         data = inputs
+        # _contrib from above
         _contrib = gdot(hidden, params[self._fhslice].reshape(self._fhshape).T)
         for i in xrange(mf_iters):
             tmp = gdot(data, params[self._vfslice].reshape(self._vfshape)) * _contrib
@@ -44,7 +45,7 @@ class Gated_RBM(Layer):
         
         # second part of gradients
         tmp = gdot(hidden, params[self._fhslice].reshape(self._fhshape).T)
-        tmp *= factors 
+        tmp *= factors
         g[self._vfslice] += gdot(data.T, tmp).ravel()
         g[self._fhslice] += gdot(factors_squared.T, hidden).ravel()
         g[self._bhslice] += hidden.sum(axis=0)
