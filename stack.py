@@ -8,6 +8,8 @@ from gnumpy import zeros as gzeros
 from gnumpy import zeros as gdot
 import gnumpy as gpu
 import numpy as np
+import h5py
+from time import strftime
 
 
 from losses import loss_table
@@ -70,16 +72,22 @@ class Stack(list):
                             info[e] = evals[e](pt_params)
                         info = replace_gnumpy_data(info)
                         log.send(info)
-
+                    
                     if (j+1) == epochs:
                         break
 
             info = layer.pt_done(pt_params, **sched)
             log.send(info)
 
-            if valid:
-                valid[0] = layer._fward(valid[0])
-            train[0] = layer._fward(train[0])
+            # move data forward, save in temporary hdf5
+            if i < (len(self) - 1):
+                nxt_name = strftime("%Y-%m-%d-%H:%M:%S") + "_L" + str(i+1) + "_TMP.h5"
+                nxt = h5py.File(nxt_name)
+                pp = {"msg": "Take care of temporary " + nxt_name}
+                munk.taggify(self.logging, "pretty").send(pp)
+                if valid:
+                    valid[0] = self.next_hdf5(layer, valid[0], "validation", nxt, chunk=512)
+                train[0] = self.next_hdf5(layer, train[0], "train", nxt, chunk=512)
 
     def train(self, schedule):
         train = [schedule["train"][0], schedule["train"][1]]
@@ -127,7 +135,18 @@ class Stack(list):
             delta = layer.bprop(params=params[c1:c2], grad=g[c1:c2], delta=delta)
         return g
 
-    def _predict(self, data):
+    def next_hdf5(self, layer, data, dname, nxt, chunk):
+        """After pretraining one layer, move
+        data to new temporary hdf5 store.
+        """
+        n = data.shape[0]
+        d = layer.shape[1]
+        tmp = nxt.create_dataset(name=dname, shape=(n, d), dtype=data.dtype)
+        for i in xrange(0, n, chunk):
+            tmp[i:i+chunk] = layer._fward(data[i:i+chunk])
+        return tmp
+        
+    def _fward(self, data):
         for layer in self:
             data = layer._fward(data)
         return loss_table[self._score](data, targets=None, predict=True)
