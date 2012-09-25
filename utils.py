@@ -80,6 +80,16 @@ def lin_inc(frm, to, step, end):
             i = i + 1
 
 
+def const(const):
+    while True:
+        yield const
+
+
+def two_step(step_one, step_two):
+    for s1, s2 in izip(step_one, step_two):
+        yield (s1, s2)
+
+
 def range_inpt(inputs, btsz, **kwargs):
     return lambda idx: garray(inputs[idx:idx+btsz])
 
@@ -238,3 +248,20 @@ def log_queue(log_to):
 
     log = munk.broadcast(*[jplog, pp])
     return log
+
+
+def reload(depot, folder, tag, layer):
+    """
+    """
+    import notebook as nb
+    model, schedule = nb.reload(depot, folder, tag, layer)
+
+    log = munk.prettyprint_sink()
+    log = munk.dontkeep(log, "tags")
+    log = munk.include_tags_only(log, "pretty")
+
+    schedule['logging'] = log
+
+    lab = schedule['__lab__']
+    lab = __import__(lab.split('.')[0])
+    lab.no_training(model, schedule)
