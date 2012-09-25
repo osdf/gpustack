@@ -20,9 +20,16 @@ class Layer(object):
         self.activ = activ
         self.p = params
         self.size = shape[0]*shape[1] + shape[1]
-        if dropout is not None:
+        if dropout is not None and dropout > 0:
+            assert(0 < dropout < 1), "Dropout needs to be in (0,1)."
             self.dropout = dropout
             self.fprop = self.fprop_dropout
+            self.bprop  = self.bprop_dropout
+        elif dropout is not None and dropout < 0:
+            # negative dropout: want to have spikey neurons
+            assert(-1 < dropout < 0), "Stochastic neuron fires with p in (0,1)."
+            self.spike = -dropout
+            self.fprop = self.fprop_spike
 
     def __repr__(self):
         _score = str(self.score).split()[1]
@@ -48,10 +55,30 @@ class Layer(object):
         return delta
 
     def fprop_dropout(self, params, data):
-        drop = gpu.rand(data.shape) > self.dropout
-        data *= drop
         self.data = data
         self.Z = self.activ(gdot(data, params[:self.m_end].reshape(self.shape)) + params[self.m_end:])
+        self.drop = gpu.rand(self.Z.shape) > self.dropout
+        self.Z *= self.drop
+        return self.Z
+
+    def bprop_dropout(self, params, grad, delta):
+        delta *= self.drop
+        dE_da = delta * diff_table[self.activ](self.Z)
+        # gradient of the bias
+        grad[self.m_end:] = dE_da.sum(axis=0)
+        # gradient of the weights
+        grad[:self.m_end] = gdot(self.data.T, dE_da).ravel()
+        # backpropagate the delta
+        delta = gdot(dE_da, params[:self.m_end].reshape(self.shape).T)
+        del self.Z
+        del self.drop
+        return delta
+
+    def fprop_spike(self, params, data):
+        self.data = data
+        self.Z = self.activ(gdot(data, params[:self.m_end].reshape(self.shape)) + params[self.m_end:])
+        self.drop = gpu.rand(self.Z.shape) > self.dropout
+        self.Z *= self.drop
         return self.Z
 
     def pt_init(self, score=None, init_var=1e-2, init_bias=0., **kwargs):
