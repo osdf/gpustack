@@ -48,7 +48,7 @@ def bernoulli(data, wm, bias, sampling=False):
     """
     suff = (gpu.dot(data, wm) + bias).logistic()
     if sampling:
-        sample = suff.rand() < suff
+        sample = suff > gpu.rand(suff.shape)
     else:
         sample = None
     return suff, sample
