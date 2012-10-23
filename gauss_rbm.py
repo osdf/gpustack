@@ -28,7 +28,7 @@ class GAUSS_RBM(Layer):
         """
         """
         hrep = str(self.H).split()[1]
-        rep = "Gauss-RBM-%s-%s"%(hrep, self.shape)
+        rep = "Gauss-RBM-%s-%s-[sparsity--%s:%s]"%(hrep, self.shape, selfl.lmbd, self.rho)
         return rep
 
     def pt_init(self, init_var=1e-2, init_bias=0., 
