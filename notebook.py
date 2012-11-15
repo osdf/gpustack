@@ -171,3 +171,31 @@ def reload(depot, folder, tag, layer):
     os.chdir(cwd)
 
     return model, sched
+
+
+def roc_fp95(depot, folder=None):
+    """
+    Show false positive rate of ROC at 95%
+    true positives.
+    """
+    if folder is None:
+        folder = []
+        for f in os.listdir(depot):
+            folder.append(f)
+    return folder
+
+
+def grep_log(logfile, field, constraints):
+    f = open(logfile)
+    grep = {}
+    res = []
+    for line in f:
+        jline = json.loads(line)
+        valid = True
+        for c in constraints:
+            if jline[c] != constraints[c]:
+                valid = False
+                break
+        if valid:
+            res.append(jline[field])
+    return res
