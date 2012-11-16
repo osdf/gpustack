@@ -14,6 +14,7 @@ import os, glob
 from os.path import join, exists
 from time import strftime
 import json
+import fnmatch
 
 
 def func_str(func):
@@ -173,19 +174,57 @@ def reload(depot, folder, tag, layer):
     return model, sched
 
 
-def roc_fp95(depot, folder=None):
+def clean_up(depot, ending=".roc.pickle", files=None):
+    """
+    Clean up _depot_: All folders that are
+    having no file ending in _ending_ are
+    deleted.
+    """
+    if files is None:
+        files = []
+        for root, dn, fnames in os.walk(depot):
+            if root == depot:
+                continue
+            if len(fnmatch.filter(fnames, "*"+ending)) == 0:
+                files.append(root)
+        return files
+    else:
+        for f in files:
+            os.remove(f)
+
+
+def roc_fp95(depot, folders=None):
     """
     Show false positive rate of ROC at 95%
     true positives.
     """
-    if folder is None:
-        folder = []
+    if folders is None:
+        folders = []
         for f in os.listdir(depot):
-            folder.append(f)
-    return folder
+            print f
+            folders.append(f)
+    res = {}
+    for f in folders:
+        path = join(depot, f)
+        for match in glob.glob(path+"/*.roc.pickle"):
+            rocf = open(match)
+            roc = cPickle.load(rocf)
+            for e in roc.keys():
+                eset = roc[e]
+                for size in eset.keys():
+                    sset = eset[size]
+                    for dist in sset.keys():
+                        fp95 = sset[dist]['fp_at_95']
+                        if e in res:
+                            best = res[e].keys()[0]
+                            if fp95 < best:
+                                res[e] = {fp95: [f, size, dist]}
+                        else:
+                            res[e] = {fp95: [f, size, dist]}
+    return res
 
 
-def grep_log(logfile, field, constraints):
+def grep_log(logfile, field, constraints={}):
     f = open(logfile)
     grep = {}
     res = []
