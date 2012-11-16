@@ -28,7 +28,7 @@ class GAUSS_RBM(Layer):
         """
         """
         hrep = str(self.H).split()[1]
-        rep = "Gauss-RBM-%s-%s-[sparsity--%s:%s]"%(hrep, self.shape, selfl.lmbd, self.rho)
+        rep = "Gauss-RBM-%s-%s-[sparsity--%s:%s]"%(hrep, self.shape, self.lmbd, self.rho)
         return rep
 
     def pt_init(self, init_var=1e-2, init_bias=0., 
@@ -49,9 +49,6 @@ class GAUSS_RBM(Layer):
         pt_params[self.m_end:-self.shape[0]] = init_bias
         pt_params[-self.shape[0]:] = 1.
 
-        #self.H = H
-        #self.activ = match_table[H]
-
         self.pt_score = self.reconstruction
         self.pt_grad = self.grad_cd1
 
@@ -67,7 +64,7 @@ class GAUSS_RBM(Layer):
         """
         """
         _params = pt_params.as_numpy_array().tolist()
-        info = dict({"params": _params, "shape": self.shape})
+        info = {"params": _params, "shape": self.shape}
 
         self.prep_layer(pt_params)
 
@@ -107,7 +104,7 @@ class GAUSS_RBM(Layer):
         h1, h_sampled = self.H(inputs, wm=prec*wm, bias=params[m_end:m_end+H], sampling=True)
         v2, v_sampled = gauss(h_sampled, wm=(wm/prec).T, bias=params[-(2*V):-V], prec=prec.T, sampling=True)
 
-        rho_hat = h1.mean()
+        rho_hat = h1.sum()
         rec = gsum((inputs - v_sampled)**2)
         
         return np.array([rec, rho_hat])
@@ -153,15 +150,16 @@ class GAUSS_RBM(Layer):
         g[-V:] *= 1./n
 
         #print gsum(g[-V:]**2)
-        if self.rho_hat is None:
-            self.rho_hat = h1.mean(axis=0)
-        else:
-            self.rho_hat *= 0.9
-            self.rho_hat += 0.1 * h1.mean(axis=0)
-        dKL_drho_hat = (self.rho - self.rho_hat)/(self.rho_hat*(1-self.rho_hat))
-        h1_1mh1 = h1*(1 - h1)
-        g[m_end:m_end+H] -= self.lmbd/n * gsum(h1_1mh1, axis=0) * dKL_drho_hat
-        g[:m_end] -= self.lmbd/n * (gdot(inputs.T * prec, h1_1mh1) * dKL_drho_hat).ravel()
+        if self.lmbd > 0.:
+            if self.rho_hat is None:
+                self.rho_hat = h1.mean(axis=0)
+            else:
+                self.rho_hat *= 0.9
+                self.rho_hat += 0.1 * h1.mean(axis=0)
+            dKL_drho_hat = (self.rho - self.rho_hat)/(self.rho_hat*(1-self.rho_hat))
+            h1_1mh1 = h1*(1 - h1)
+            g[m_end:m_end+H] -= self.lmbd/n * gsum(h1_1mh1, axis=0) * dKL_drho_hat
+            g[:m_end] -= self.lmbd/n * (gdot(inputs.T * prec, h1_1mh1) * dKL_drho_hat).ravel()
 
         #g[:] = -g[:]
         return g

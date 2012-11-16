@@ -59,7 +59,7 @@ class Stack(list):
             opt, iargs, ikwargs, evals = prepare_opt(opt_schedule, schedule, train, valid)
             opt.__init__(wrt=pt_params, args=izip(iargs, ikwargs), **opt_schedule)
 
-            pp = dict({'layer':i, 'type':str(layer)})
+            pp = {'layer':i, 'type':str(layer)}
             munk.taggify(self.logging, "pretty").send(pp)
             log = munk.add_keyvalue(self.logging, "layer", i)
 
@@ -102,7 +102,7 @@ class Stack(list):
         opt, iargs, ikwargs, evals = prepare_opt(opt_schedule, schedule, train, valid)
         opt.__init__(wrt=self.params, args=izip(iargs, ikwargs), **opt_schedule)
 
-        pp = dict({"type" : str(self)})
+        pp = {"type" : str(self)}
         munk.taggify(self.logging, "pretty").send(pp)
         log = munk.add_keyvalue(self.logging, "layer", "Stack")
 
