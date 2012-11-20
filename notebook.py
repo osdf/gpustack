@@ -10,7 +10,7 @@ sys.path.append("../")
 import types
 import hashlib, shutil
 import cPickle
-import os, glob
+import os, glob, shutil
 from os.path import join, exists
 from time import strftime
 import json
@@ -190,7 +190,7 @@ def clean_up(depot, ending=".roc.pickle", files=None):
         return files
     else:
         for f in files:
-            os.remove(f)
+            shutil.rmtree(f)
 
 
 def roc_fp95(depot, folders=None):
@@ -201,7 +201,6 @@ def roc_fp95(depot, folders=None):
     if folders is None:
         folders = []
         for f in os.listdir(depot):
-            print f
             folders.append(f)
     res = {}
     for f in folders:

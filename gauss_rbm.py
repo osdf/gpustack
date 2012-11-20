@@ -14,6 +14,7 @@ import gnumpy as gpu
 
 from layer import Layer
 from misc import match_table, cpu_table, bernoulli, gauss
+from utils import init_SI
 
 
 class GAUSS_RBM(Layer):
@@ -31,21 +32,16 @@ class GAUSS_RBM(Layer):
         rep = "Gauss-RBM-%s-%s-[sparsity--%s:%s]"%(hrep, self.shape, self.lmbd, self.rho)
         return rep
 
-    def pt_init(self, init_var=1e-2, init_bias=0., 
-           rho=0.5, lmbd=0., l2=0., **kwargs):
+    def pt_init(self, init_var=1e-2, init_bias=0., rho=0.5, lmbd=0., 
+            l2=0., SI=15, **kwargs):
         """
         """
         # 2*self.shape[0]: precision parameters have size shape[0]
         pt_params = gzeros(self.m_end + self.shape[1] + 2*self.shape[0])
         if init_var is None:
-            init_heur = 4*np.sqrt(6./(self.shape[0]+self.shape[1]))
-            pt_params[:self.m_end] = gpu.rand(self.m_end)
-            pt_params[:self.m_end] *= 2
-            pt_params[:self.m_end] -= 1
-            pt_params[:self.m_end] *= init_heur
+            pt_params[:self.m_end] = gpu.garray(init_SI(self.shape, sparsity=SI)).ravel()
         else:
             pt_params[:self.m_end] = init_var * gpu.randn(self.m_end)
-        pt_params[:self.m_end] = init_var*gpu.randn(self.m_end)
         pt_params[self.m_end:-self.shape[0]] = init_bias
         pt_params[-self.shape[0]:] = 1.
 
@@ -76,8 +72,8 @@ class GAUSS_RBM(Layer):
         """Prepare for layer interpretation.
         """
         prec = pt_params[-self.shape[0]:][:, gpu.newaxis]
-        self._bias = pt_params[-2*self.shape[0]:-self.shape[0]].copy()
-        self._prec = prec.ravel().copy()
+        self._bias = pt_params[-2*self.shape[0]:-self.shape[0]].as_numpy_array()
+        self._prec = prec.ravel().as_numpy_array()
         wm = prec*pt_params[:self.m_end].reshape(self.shape)
 
         self.p[:self.m_end] = wm.ravel()

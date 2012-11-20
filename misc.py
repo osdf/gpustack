@@ -102,13 +102,13 @@ def nrelu(data, wm, bias, sampling=False):
     """A noisy rectified linear unit.
     """
     suff = gpu.dot(data, wm) + bias
-    suff *= (suff > 0)
     if sampling:
-        sample = suff + (gpu.sqrt(suff.logistic()) * gpu.randn(suff.shape))
-        #sample = suff + gpu.randn(suff.shape)
-        #sample *= (sample > 0)
+        #sample = suff + (gpu.sqrt(suff.logistic()) * gpu.randn(suff.shape))
+        sample = suff + gpu.randn(suff.shape)
+        sample *= (sample > 0)
     else:
         sample = None
+    suff *= (suff > 0)
     return suff, sample
 
 

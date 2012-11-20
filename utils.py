@@ -4,6 +4,7 @@
 
 
 import numpy as np
+import random
 from itertools import izip, cycle, repeat
 import json
 
@@ -265,3 +266,17 @@ def reload(depot, folder, tag, layer):
     lab = schedule['__lab__']
     lab = __import__(lab.split('.')[0])
     lab.no_training(model, schedule)
+
+
+def init_SI(shape, sparsity):
+    """
+    Produce sparsly initialized weight matrix
+    as described by Martens, 2010.
+
+    Note: shape is supposed to be visible x hiddens.
+    The following code produces first a hiddens x visible.
+    """
+    tmp = np.zeros((shape[1], shape[0]))
+    for i in tmp:
+        i[random.sample(xrange(shape[0]), sparsity)] = np.random.randn(sparsity)
+    return tmp.T

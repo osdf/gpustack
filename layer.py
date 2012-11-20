@@ -11,7 +11,7 @@ import gnumpy as gpu
 
 
 from misc import diff_table, cpu_table
-
+from utils import init_SI
 
 class Layer(object):
     def __init__(self, shape, activ, params=None, dropout=None, **kwargs):
@@ -27,12 +27,13 @@ class Layer(object):
             self.bprop  = self.bprop_dropout
         elif dropout is not None and dropout < 0:
             # negative dropout: want to have spikey neurons
-            assert(-1 < dropout < 0), "Stochastic neuron fires with p in (0,1)."
-            self.spike = -dropout
             self.fprop = self.fprop_spike
 
     def __repr__(self):
-        _score = str(self.score).split()[1]
+        if self.score is None:
+            _score = "empty"
+        else:
+            _score = str(self.score).split()[1]
         return "Layer-%s-%s"%(_score, self.shape)
 
     def fward(self, params, data):
@@ -77,12 +78,20 @@ class Layer(object):
     def fprop_spike(self, params, data):
         self.data = data
         self.Z = self.activ(gdot(data, params[:self.m_end].reshape(self.shape)) + params[self.m_end:])
-        self.drop = gpu.rand(self.Z.shape) > self.dropout
-        self.Z *= self.drop
-        return self.Z
+        spike = self.Z > gpu.rand(self.Z.shape)
+        return spike
 
-    def pt_init(self, score=None, init_var=1e-2, init_bias=0., **kwargs):
-        self.p[:self.m_end] = init_var * gpu.randn(self.m_end)
+    def transpose(self, params):
+        t = Layer(shape=(self.shape[1], self.shape[0]), activ=None, params=params)
+        t.pt_init(score=None, init_var=None, init_bias=0, SI=self.SI)
+        return t
+
+    def pt_init(self, score=None, init_var=1e-2, init_bias=0., SI=15, **kwargs):
+        if init_var is None:
+            self.SI = SI
+            self.p[:self.m_end] = gpu.garray(init_SI(self.shape, sparsity=SI)).ravel()
+        else:
+            self.p[:self.m_end] = init_var * gpu.randn(self.m_end)
         self.p[self.m_end:] = init_bias
         self.score = score
         return self.p 
@@ -93,7 +102,7 @@ class Layer(object):
         on 'real' parameters (see pt_init: self.p is used).
         """
         _params = pt_params.as_numpy_array().tolist()
-        info = dict({"params": _params, "shape": self.shape})
+        info = {"params": _params, "shape": self.shape}
         return info
 
     def pt_score(self, params, inputs, targets, l2=0, **kwargs):

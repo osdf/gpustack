@@ -3,14 +3,15 @@
 """
 
 
-from itertools import izip
-from gnumpy import zeros as gzeros
-from gnumpy import zeros as gdot
-import gnumpy as gpu
 import numpy as np
+from itertools import izip
 import h5py
 from time import strftime
 
+
+from gnumpy import zeros as gzeros
+from gnumpy import zeros as gdot
+import gnumpy as gpu
 
 from losses import loss_table
 from utils import prepare_opt, replace_gnumpy_data
@@ -53,28 +54,32 @@ class Stack(list):
             pt_params = layer.pt_init(**sched)
             
             opt_schedule = sched["opt"]
-            opt_schedule["f"] = layer.pt_score
-            opt_schedule["fprime"] = layer.pt_grad
-
-            opt, iargs, ikwargs, evals = prepare_opt(opt_schedule, schedule, train, valid)
-            opt.__init__(wrt=pt_params, args=izip(iargs, ikwargs), **opt_schedule)
-
-            pp = {'layer':i, 'type':str(layer)}
+            
+            pp = {"layer":i, "type":str(layer)}
             munk.taggify(self.logging, "pretty").send(pp)
             log = munk.add_keyvalue(self.logging, "layer", i)
-
-            stop = opt_schedule["stop"]
-            epochs = opt_schedule["epochs"]
+            
             if opt_schedule["epochs"] > 0:
+                opt_schedule["f"] = layer.pt_score
+                opt_schedule["fprime"] = layer.pt_grad
+
+                opt, iargs, ikwargs, evals = prepare_opt(opt_schedule, schedule, train, valid)
+                opt.__init__(wrt=pt_params, args=izip(iargs, ikwargs), **opt_schedule)
+
+                stop = opt_schedule["stop"]
+                epochs = opt_schedule["epochs"]
                 for j, info in enumerate(opt):
                     if (j+1) % stop == 0:
                         for e in evals:
                             info[e] = evals[e](pt_params)
                         info = replace_gnumpy_data(info)
                         log.send(info)
-                    
+                        
                     if (j+1) == epochs:
                         break
+            else:
+                pp = {"msg": "NO PRETRAINING of layer %i"%i}
+                munk.taggify(self.logging, "pretty").send(pp)
 
             info = layer.pt_done(pt_params, **sched)
             log.send(info)
