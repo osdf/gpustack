@@ -9,19 +9,27 @@ from itertools import izip
 from gnumpy import zeros as gzeros
 
 from stack import Stack
-from layer import Layer
 import chopmunk as munk
 
 
 class DAE(Stack):
     def __init__(self, ind, schedule):
         super(DAE, self).__init__(ind=ind, schedule=schedule)
+        self.encoder = None
+
+    def __repr__(self):
+        if self.encoder is None:
+            rep = super(DAE, self).__repr__()
+        else:
+            rep = "|".join([str(l) for l in self.encoder])
+            rep += "|"
+            rep += "|".join([str(l) for l in self.decoder])
+        return rep
 
     def pretrain(self, schedule):
         super(DAE, self).pretrain(schedule=schedule)
 
         p = self.params.as_numpy_array()
-        del self.params
 
         # How many parameters in the unrolled model?
         _dec = []
@@ -35,7 +43,7 @@ class DAE(Stack):
         _dec.append(0)
         _dec.reverse()
         self.dec = np.cumsum(_dec) + self.enc[-1]
-        print self.enc, self.dec
+
         # Build up encoder and decoder
         self.encoder = []
         self.params = gzeros(self.psize)
@@ -43,10 +51,8 @@ class DAE(Stack):
             self.encoder.append(layer)
             self.params[c1:c2] = p[c1:c2]
             layer.p = self.params[c1:c2]
-            print c1, c2
         self.decoder = []
         for layer, (c1, c2) in izip(self[-1::-1], izip(self.dec[:-1], self.dec[1:])):
-            print c1, c2
             l = layer.transpose(self.params[c1:c2])
             self.decoder.append(l)
         # Fix missing activations of decoder
@@ -66,7 +72,7 @@ class DAE(Stack):
         for layer, (c1, c2) in izip(self.decoder, izip(self.dec[:-1], self.dec[1:])):
             data = layer.fward(self.params[c1:c2], data)
 
-        return self._score(data, targets)
+        return self._score(data, inputs)
 
     def fward(self, inputs, **kwargs):
         data = inputs
@@ -84,7 +90,7 @@ class DAE(Stack):
         for layer, (c1, c2) in izip(self.decoder, izip(self.dec[:-1], self.dec[1:])):
             data = layer.fprop(self.params[c1:c2], data)
 
-        _, delta = self.score(data, inputs, error=True)
+        _, delta = self._score(data, inputs, error=True)
 
         g = gzeros(self.psize)
         

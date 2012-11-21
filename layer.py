@@ -82,9 +82,9 @@ class Layer(object):
         return spike
 
     def transpose(self, params):
-        t = Layer(shape=(self.shape[1], self.shape[0]), activ=None, params=params)
-        t.pt_init(score=None, init_var=None, init_bias=0, SI=self.SI)
-        return t
+        T = Layer(shape=(self.shape[1], self.shape[0]), activ=None, params=params)
+        T.pt_init(score=None, init_var=None, init_bias=0, SI=self.SI)
+        return T
 
     def pt_init(self, score=None, init_var=1e-2, init_bias=0., SI=15, **kwargs):
         if init_var is None:

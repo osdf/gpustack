@@ -1,5 +1,15 @@
 """
-
+YADAYADA is a simple toolbox for learning neural networks with many hidden layers.
+It allows to build these deep networks by successivly pretraining these layers in
+order to help training the complete deep network. Therefore, the central data structure
+is the Stack, a list of layers.
+Two aspects are at the center of YADAYADA: (i) It must allow pretraining the single
+layers and (ii) it must allow the usage of general optimization algorithms. To facilitate
+this, the Stack is managing the complete parameter vector of the deep network. The
+various layers only have views into this vector -- they have their own parameters when
+in pretraining mode. It only uses its view on the global parameter vector when updating
+this global parameter after a finished pretraining session. This explains why every single layer gets always the parameters
+passed in when doing forward or backward computations over the full stack.
 """
 
 
@@ -10,7 +20,6 @@ from time import strftime
 
 
 from gnumpy import zeros as gzeros
-from gnumpy import zeros as gdot
 import gnumpy as gpu
 
 from losses import loss_table
@@ -59,7 +68,8 @@ class Stack(list):
             munk.taggify(self.logging, "pretty").send(pp)
             log = munk.add_keyvalue(self.logging, "layer", i)
             
-            if opt_schedule["epochs"] > 0:
+            epochs = opt_schedule["epochs"]
+            if epochs > 0:
                 opt_schedule["f"] = layer.pt_score
                 opt_schedule["fprime"] = layer.pt_grad
 
@@ -67,7 +77,6 @@ class Stack(list):
                 opt.__init__(wrt=pt_params, args=izip(iargs, ikwargs), **opt_schedule)
 
                 stop = opt_schedule["stop"]
-                epochs = opt_schedule["epochs"]
                 for j, info in enumerate(opt):
                     if (j+1) % stop == 0:
                         for e in evals:
@@ -82,6 +91,7 @@ class Stack(list):
                 munk.taggify(self.logging, "pretty").send(pp)
 
             info = layer.pt_done(pt_params, **sched)
+            pt_params = None
             log.send(info)
 
             # move data forward, save in temporary hdf5
@@ -111,6 +121,7 @@ class Stack(list):
         munk.taggify(self.logging, "pretty").send(pp)
         log = munk.add_keyvalue(self.logging, "layer", "Stack")
 
+        epochs = opt_schedule["epochs"]
         stop = opt_schedule["stop"]
         for i, info in enumerate(opt):
             if i % stop == 0:
@@ -119,7 +130,7 @@ class Stack(list):
                 info = replace_gnumpy_data(info)
                 log.send(info)
 
-            if i+1 == opt_schedule["epochs"]:
+            if i+1 == epochs:
                 break
 
     def score(self, params, inputs, targets, **kwargs):

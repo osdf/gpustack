@@ -76,6 +76,8 @@ class GAUSS_RBM(Layer):
         self._prec = prec.ravel().as_numpy_array()
         wm = prec*pt_params[:self.m_end].reshape(self.shape)
 
+        # Note: self.p points into the big Stack parameter, the
+        # next lines thus copy directly into this big parameter.
         self.p[:self.m_end] = wm.ravel()
         self.p[-self.shape[1]:] = pt_params[self.m_end:self.m_end+self.shape[1]]
 
