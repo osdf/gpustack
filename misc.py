@@ -156,3 +156,10 @@ match_table = {
         ,nrelu: relu
         ,gauss: idnty
         }
+
+str_table = {
+        gpu.logistic: "log"
+        ,gpu.tanh: "tanh"
+        ,idnty: "id"
+        ,relu: "relu"
+        }

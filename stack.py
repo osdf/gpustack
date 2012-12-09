@@ -1,5 +1,5 @@
 """
-YADAYADA is a simple toolbox for learning neural networks with many hidden layers.
+YADAYADA is a simple toolbox for training neural networks with many hidden layers.
 It allows to build these deep networks by successivly pretraining these layers in
 order to help training the complete deep network. Therefore, the central data structure
 is the Stack, a list of layers.
@@ -111,27 +111,32 @@ class Stack(list):
         assert (valid is not None) == ("valid" in schedule["eval"]), "Confusion about validation set!"
 
         opt_schedule = schedule["opt"]
-        opt_schedule["f"] = self.score
-        opt_schedule["fprime"] = self.grad
-
-        opt, iargs, ikwargs, evals = prepare_opt(opt_schedule, schedule, train, valid)
-        opt.__init__(wrt=self.params, args=izip(iargs, ikwargs), **opt_schedule)
-
+        
         pp = {"type" : str(self)}
         munk.taggify(self.logging, "pretty").send(pp)
         log = munk.add_keyvalue(self.logging, "layer", "Stack")
-
+       
         epochs = opt_schedule["epochs"]
-        stop = opt_schedule["stop"]
-        for i, info in enumerate(opt):
-            if i % stop == 0:
-                for e in evals:
-                    info[e] = evals[e](self.params)
-                info = replace_gnumpy_data(info)
-                log.send(info)
+        if epochs > 0:
+            opt_schedule["f"] = self.score
+            opt_schedule["fprime"] = self.grad
 
-            if i+1 == epochs:
-                break
+            opt, iargs, ikwargs, evals = prepare_opt(opt_schedule, schedule, train, valid)
+            opt.__init__(wrt=self.params, args=izip(iargs, ikwargs), **opt_schedule)
+
+            stop = opt_schedule["stop"]
+            for i, info in enumerate(opt):
+                if (i+1) % stop == 0:
+                    for e in evals:
+                        info[e] = evals[e](self.params)
+                    info = replace_gnumpy_data(info)
+                    log.send(info)
+
+                if i+1 == epochs:
+                    break
+        else:
+            pp = {"msg": "NO FINETUNING of stack"}
+            munk.taggify(self.logging, "pretty").send(pp)
 
     def score(self, params, inputs, targets, **kwargs):
         data = inputs

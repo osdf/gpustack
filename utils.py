@@ -270,7 +270,7 @@ def reload(depot, folder, tag, layer):
 
 def init_SI(shape, sparsity):
     """
-    Produce sparsly initialized weight matrix
+    Produce sparsely initialized weight matrix
     as described by Martens, 2010.
 
     Note: shape is supposed to be visible x hiddens.
@@ -280,3 +280,31 @@ def init_SI(shape, sparsity):
     for i in tmp:
         i[random.sample(xrange(shape[0]), sparsity)] = np.random.randn(sparsity)
     return tmp.T
+
+
+def binomial(width):
+    filt = np.array([0.5, 0.5])
+    for i in xrange(width-2):
+        filt = np.convolve(filt, [0.5, 0.5])
+    return filt
+
+
+def mask(factors, stride, size):
+    fsqr = int(np.sqrt(factors))
+    hsqr = int(fsqr/stride)
+    conv = np.zeros((factors, hsqr*hsqr), dtype=np.float32)
+    msk = np.zeros((factors, hsqr*hsqr), dtype=np.float32)
+    _s = size/2
+    print "Mask size:", msk.shape
+    col = np.zeros((1, fsqr))
+    col[0, 0:size] = binomial(size) 
+    row = np.zeros((1, fsqr))
+    row[0, 0:size] = binomial(size) 
+    for j in xrange(0, fsqr, stride):
+        for i in xrange(0, fsqr, stride):
+            _row = np.roll(row, j-_s)
+            _col = np.roll(col, i-_s)
+            idx = (j*hsqr + i)/stride
+            conv[:, idx] = np.dot(_col.T, _row).ravel()
+            msk[:, idx] = conv[:, idx] > 0 
+    return msk, conv

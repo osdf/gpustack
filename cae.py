@@ -4,6 +4,8 @@ with sigmoidal hidden units.
 """
 
 
+import numpy as np
+
 from gnumpy import dot as gdot
 from gnumpy import zeros as gzeros
 from gnumpy import logistic
@@ -32,7 +34,7 @@ class CAE(TAE):
         cae *= self.cae
 
         sc = self.score(Z, inpts, addon=cae)
-        return sc
+        return np.array([sc, cae])
 
     def pt_grad(self, params, inpts, **kwargs):
         g = gzeros(params.shape)

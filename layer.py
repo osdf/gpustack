@@ -10,7 +10,7 @@ from gnumpy import zeros as gzeros
 import gnumpy as gpu
 
 
-from misc import diff_table, cpu_table
+from misc import diff_table, cpu_table, str_table
 from utils import init_SI
 
 class Layer(object):
@@ -31,10 +31,10 @@ class Layer(object):
 
     def __repr__(self):
         if self.score is None:
-            _score = "empty"
+            _score = "no_score"
         else:
             _score = str(self.score).split()[1]
-        return "Layer-%s-%s"%(_score, self.shape)
+        return "Layer-%s-%s-%s"%(_score, str_table[self.activ], self.shape)
 
     def fward(self, params, data):
         return self.activ(gdot(data, params[:self.m_end].reshape(self.shape)) + params[self.m_end:])

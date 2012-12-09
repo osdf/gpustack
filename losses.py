@@ -6,6 +6,7 @@ Different types of losses.
 import numpy as np
 import gnumpy as gpu
 from utils import logsumexp, _logsumexp
+import misc
 
 
 def ssd(z, targets, weight=0.5, predict=False, error=False, addon=0):
@@ -23,7 +24,7 @@ def ssd(z, targets, weight=0.5, predict=False, error=False, addon=0):
         return weight*gpu.sum(err**2)/n + addon
 
 
-def mia(z, targets, predict=False, error=False, addon=0):
+def mia(z, targets, predict=False, error=False, addon=0, tiny=1e-10):
     """
     Multiple independent attributes (i.e. independent
     binary cross entropy errors).
@@ -37,8 +38,7 @@ def mia(z, targets, predict=False, error=False, addon=0):
     n, _ = bern.shape
     # loss is binary cross entropy
     # for every output variable
-    bce =  -( targets*bern.log() + (1-targets)*(1-bern).log() ).sum(axis=1)
-    bce = gpu.mean(bce)
+    bce =  -( targets*(bern+tiny).log() + (1-targets)*(1-bern+tiny).log() ).sum()
     if error:
         return bce + addon, (bern - targets)/n
     else:

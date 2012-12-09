@@ -4,8 +4,6 @@ an unsupervised way using a Tied
 AutoEncoder (TAE).
 """
 
-import numpy as np
-
 
 from gnumpy import dot as gdot
 from gnumpy import zeros as gzeros
@@ -14,6 +12,7 @@ import gnumpy as gpu
 
 from layer import Layer
 from misc import diff_table
+from utils import init_SI
 
 
 class TAE(Layer):
@@ -25,19 +24,17 @@ class TAE(Layer):
         rep = "TAE-%s-%s"%(activ, self.shape)
         return rep
 
-    def pt_init(self, score=None, init_var=1e-2, init_bias=0., **kwargs):
+    def pt_init(self, score=None, init_var=1e-2, init_bias=0., l2=0., SI=15, **kwargs):
         pt_params = gzeros(self.m_end + self.shape[1] + self.shape[0])
         if init_var is None:
-            init_heur = 4*np.sqrt(6./(self.shape[0]+self.shape[1]))
-            pt_params[:self.m_end] = gpu.rand(self.m_end)
-            pt_params[:self.m_end] *= 2
-            pt_params[:self.m_end] -= 1
-            pt_params[:self.m_end] *= init_heur
+            pt_params[:self.m_end] = gpu.garray(init_SI(self.shape, sparsity=SI)).ravel()
         else:
             pt_params[:self.m_end] = init_var * gpu.randn(self.m_end)
 
         pt_params[self.m_end:] = init_bias
         self.score = score
+
+        self.l2 = l2
         return pt_params
 
     def pt_done(self, pt_params, **kwargs):

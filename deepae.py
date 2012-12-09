@@ -3,11 +3,12 @@
 
 
 import numpy as np
-from itertools import izip
+from itertools import izip, chain
 
 
 from gnumpy import zeros as gzeros
 
+from misc import idnty
 from stack import Stack
 import chopmunk as munk
 
@@ -55,9 +56,11 @@ class DAE(Stack):
         for layer, (c1, c2) in izip(self[-1::-1], izip(self.dec[:-1], self.dec[1:])):
             l = layer.transpose(self.params[c1:c2])
             self.decoder.append(l)
+
         # Fix missing activations of decoder
-        for i, layer in enumerate(self[-2::1]):
+        for i, layer in enumerate(self[-2::-1]):
             self.decoder[i].activ = layer.activ
+        self.decoder[-1].activ = idnty
 
         msg = {"msg": "DAE unrolled: %s"%self}
         munk.taggify(self.logging, "pretty").send(msg)
