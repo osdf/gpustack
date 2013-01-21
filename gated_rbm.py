@@ -11,11 +11,33 @@ class Gated_RBM(Layer):
     def score():
         pass
 
-    def cd1_grad(self, params, inputs, mf_damp, **kwargs):
+    def cd1_3way_grad(self, params, inputs, mf_damp, **kwargs):
         g = gzeros(params.shape)
 
-        factors = gdot(inputs, params[self._vfslice].reshape(self._vfshape)) 
-        factors_squared = factors**2
+        # normalize parameters with running norm
+        # TODO
+
+        weights_xf = params[].reshape(self.xfshape)
+        weights_yf = params[].reshape(self.yfshape)
+        weights_fz = params[].reshape(self.zfshape)
+        bias_x = params[]
+        bias_y = params[]
+        bias_z = params[]
+
+        factors_x = gdot(inputs, weights_xf) 
+        factors_y = gdot(inputs, weights_yf)
+        factors = factors_x * factors_y
+
+        h1, h_sampled = bernoulli(factors, wm=factors, bias=bias_h)
+        factors_h = gdot(h_sampled, weights_fz.T)
+
+        d_xf = gdot(inputs.T, factors_y*factors_z)
+        d_yf = gdot(inputs.T factors_x*factors_z)
+        d_fz = gdot(h_sampled.T, factors)
+
+
+
+
         tmp = gdot(factors_squared, params[self._fhslice].reshape(self._fhshape))
         hidden = sigmoid(tmp + params[self._bhslice])
 
