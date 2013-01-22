@@ -28,15 +28,30 @@ class Gated_RBM(Layer):
         factors_y = gdot(inputs, weights_yf)
         factors = factors_x * factors_y
 
-        h1, h_sampled = bernoulli(factors, wm=factors, bias=bias_h)
+        h1, h_sampled = bernoulli(factors, wm=factors, bias=bias_h, sampling=True)
         factors_h = gdot(h_sampled, weights_fz.T)
 
         d_xf = gdot(inputs.T, factors_y*factors_z)
         d_yf = gdot(inputs.T factors_x*factors_z)
         d_fz = gdot(h_sampled.T, factors)
+        # bias gradient missing!!!!
+
+        # 3way cd
+
+        factors_x = gdot(x1, weights_xf) 
+        factors_y = gdot(y1, weights_yf)
+        factors = factors_x * factors_y
+
+        h2, _ = bernoulli(factors, wm=factors, bias=bias_h)
+        factors_h = gdot(h2, weights_fz.T)
+
+        d_xf = gdot(x1.T, factors_y*factors_z)
+        d_yf = gdot(y1.T factors_x*factors_z)
+        d_fz = gdot(h2.T, factors)
+        # bias gradient missing!!!!
 
 
-
+        
 
         tmp = gdot(factors_squared, params[self._fhslice].reshape(self._fhshape))
         hidden = sigmoid(tmp + params[self._bhslice])
