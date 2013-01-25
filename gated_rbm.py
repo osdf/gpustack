@@ -28,26 +28,42 @@ class Gated_RBM(Layer):
         factors_y = gdot(inputs, weights_yf)
         factors = factors_x * factors_y
 
-        h1, h_sampled = bernoulli(factors, wm=factors, bias=bias_h, sampling=True)
+        h1, h_sampled = bernoulli(factors, wm=weights_fz, bias=bias_h, sampling=True)
         factors_h = gdot(h_sampled, weights_fz.T)
 
         # TODO: two types of inputs!
         # TODO: check signs!!
-        d_xf = gdot(inputs.T, factors_y*factors_z).ravel()
-        d_yf = gdot(inputs.T factors_x*factors_z).ravel()
+        d_xf = gdot(inputs.T, factors_y*factors_h).ravel()
+        d_yf = gdot(inputs.T factors_x*factors_h).ravel()
         d_fz = gdot(h_sampled.T, factors).ravel()
         d_bx = -inputs.sum(axis=0)
         d_by = -inputs.sum(axis=0)
         d_bz = -h1.sum(axis=0)
 
         # 3way cd: TODO
-        
-        # negative phase
-        factors_x = gdot(x1, weights_xf) 
-        factors_y = gdot(y1, weights_yf)
-        factors = factors_x * factors_y
+        way = np.random.randn() > 0.5
+        if way:
+            # reconstruct y (output) first.
+            tmp = factors_x * factors_h
+            y1, _ = self.V(tmp, wm=weights_yf.T, bias=bias_y)
+            factors_y[:] = gdot(y1, weights_yf)
+            # then reconstruct x (input).
+            tmp = factors_y * factors_h
+            x1, _ = self.V(tmp, wm=weights_xf.T, bias=bias_x)
+            factors_x[:] = gdot(x1, weights_xf)
+        else:
+            # reconstruct x (input) first.
+            tmp = factors_y * factors_h
+            x1, _ = self.V(tmp, wm=weights_xf.T, bias=bias_x)
+            factors_x[:] = gdot(x1, weights_xf)
+            # then reconstruct y (output).
+            tmp = factors_x * factors_h
+            y1, _ = self.V(tmp, wm=weights_yf.T, bias=bias_x)
+            factors_y[:] = gdot(y1, weights_yf)
 
-        h2, _ = bernoulli(factors, wm=factors, bias=bias_h)
+
+        factors[:] = factors_x * factors_y
+        h2, _ = bernoulli(factors, wm=weights_hf, bias=bias_h)
         factors_h = gdot(h2, weights_fz.T)
 
         d_xf = gdot(x1.T, factors_y*factors_z).ravel()
@@ -56,5 +72,4 @@ class Gated_RBM(Layer):
         d_bx = x1.sum(axis=0)
         d_by = x2.sum(axis=0)
         d_bz = h2.sum(axis=0)
-        
         return g
