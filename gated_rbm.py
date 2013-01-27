@@ -1,17 +1,54 @@
-class Gated_RBM(Layer):
-    def __init__(self)
+"""
+Gated factored RBM, from
+Modeling the joint density of two images under a variety of transformations.
+see http://www.cs.toronto.edu/~rfm/morphbm/index.html
+"""
 
-    
+
+import numpy as np
+
+
+from gnumpy import dot as gdot
+from gnumpy import sum as gsum
+import gnumpy as gpu
+
+
+from layer import Layer
+from misc import gaussian
+
+
+class Gated_RBM(Layer):
+    def __init__(self, shape, V=gaussian, params=None, **kwargs):
+        pass
+
+    def __repr__(self):
+        """
+        """
+        vrep = str()
+        rep = "FGRBM-%s-%s-%s-[sparsity--%s:%s]"
+        return rep
+
+    def fward(self, params, data):
+        pass
+
+    def _fward(self, data):
+        pass
+
     def pt_init(self):
         pass
 
     def pt_done(self):
         pass
 
-    def score():
+    def score(self,):
         pass
 
     def cd1_3way_grad(self, params, inputs, mf_damp, **kwargs):
+        # suggestion: input generator produces 2tuple of
+        # input, one matrix X, one matrix Y
+        # shape of parameters: first weights from X and Y to Z,
+        # then bias for z, then bias for X,Y -- last two are left
+        # away for forward model
         g = gzeros(params.shape)
 
         # normalize parameters with running norm
@@ -40,7 +77,7 @@ class Gated_RBM(Layer):
         d_by = -inputs.sum(axis=0)
         d_bz = -h1.sum(axis=0)
 
-        # 3way cd: TODO
+        # 3way cd
         way = np.random.randn() > 0.5
         if way:
             # reconstruct y (output) first.
