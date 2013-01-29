@@ -24,9 +24,24 @@ class Gated_RBM(Layer):
         self.shape = shape
         self.activ = match_table[H]
         self.p = params
+        
         self.H = H
         self.V = V
-        self.size = (shape[0][0] + shape[0][1])*shape[1] + shape[1] + shape[0][0] + shape[0][1]
+        
+        self.factors = shape[1]
+        # several helpers
+        self.xf_sz = shape[0][0]*shape[1]
+        self.xfshape = (shape[0][0], shape[1])
+
+        self.yf_sz = shape[0][1]*shape[1]
+        self.yfshape = (shape[0][1], shape[1])
+        
+        self.hf_sz = shape[1]*shape[2]
+        self.hfshape = (shape[2], shape[1])
+        
+        self._cum_xy = self.xf_sz + self.yf_sz
+        self._cum_xyh = self._cum_xy + self.hf_sz
+        self.size = self._cum_xyh + shape[2]
 
     def __repr__(self):
         """
@@ -42,8 +57,21 @@ class Gated_RBM(Layer):
     def _fward(self, data):
         pass
 
-    def pt_init(self):
-        pass
+    def pt_init(self, init_var=1e-2, init_bias=0., rho=0.5, lmbd=0., l2=0.):
+        """
+        """
+        pt_params = gzeros(self.size + self.shape[0][0] + self.shape[0][1])
+        pt_params[:self._cum_xyh] = init_var * gpu.randn(self._cum_xyh) 
+
+        self.pt_score = self.score
+        self.pt_grad = self.cd1_3way_grad
+
+        self.l2 = l2
+        self.rho = rho
+        self.lmbd = lmbd
+        self.rho_hat = None
+
+        return pt_params
 
     def pt_done(self):
         pass
@@ -59,16 +87,16 @@ class Gated_RBM(Layer):
         # away for forward model
         g = gzeros(params.shape)
 
-        # normalize parameters with running norm
-        # TODO
 
-        weights_xf = params[].reshape(self.xfshape)
-        weights_yf = params[].reshape(self.yfshape)
-        weights_fz = params[].reshape(self.zfshape)
-        bias_x = params[]
-        bias_y = params[]
-        bias_z = params[]
+        weights_xf = params[:self.xf_sz].reshape(self.xfshape)
+        weights_yf = params[self.xf_sz:self._cum_xy].reshape(self.yfshape)
+        weights_fh = params[self._cum_xy:self._cum_xyh].reshape(self.zfshape)
+        bias_z = params[self._cum_xyh:self.size]
+        bias_x = params[self.size:-self.shape[0][1]]
+        bias_y = params[-self.shape[0][1]:]
 
+        # TODO: renorm weights!
+        
         factors_x = gdot(inputs, weights_xf) 
         factors_y = gdot(inputs, weights_yf)
         factors = factors_x * factors_y
