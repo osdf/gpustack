@@ -6,6 +6,8 @@ http://www.cs.toronto.edu/~tang/papers/mr_dbn.pdf
 
 
 import numpy as np
+
+
 from gnumpy import dot as gdot
 from gnumpy import zeros as gzeros
 from gnumpy import sum as gsum
@@ -13,7 +15,7 @@ import gnumpy as gpu
 
 
 from layer import Layer
-from misc import match_table, cpu_table, bernoulli, gauss
+from misc import match_table, bernoulli, gauss
 from utils import init_SI
 
 

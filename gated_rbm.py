@@ -14,18 +14,26 @@ import gnumpy as gpu
 
 
 from layer import Layer
-from misc import gaussian
+from misc import match_table, gaussian, bernoulli
 
 
 class Gated_RBM(Layer):
-    def __init__(self, shape, V=gaussian, params=None, **kwargs):
-        pass
+    def __init__(self, shape, H=bernoulli, V=gaussian, params=None, **kwargs):
+        """
+        """
+        self.shape = shape
+        self.activ = match_table[H]
+        self.p = params
+        self.H = H
+        self.V = V
+        self.size = (shape[0][0] + shape[0][1])*shape[1] + shape[1] + shape[0][0] + shape[0][1]
 
     def __repr__(self):
         """
         """
-        vrep = str()
-        rep = "FGRBM-%s-%s-%s-[sparsity--%s:%s]"
+        vrep = str(self.V).split()[1]
+        hrep = str(self.H).split()[1]
+        rep = "FGRBM-%s-%s-%s-[sparsity--%s:%s]"%(vrep, hrep, self.shape, self.lmbd, self.rho)
         return rep
 
     def fward(self, params, data):
