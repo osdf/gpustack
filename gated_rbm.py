@@ -18,14 +18,13 @@ from misc import match_table, gaussian, bernoulli
 
 
 class Gated_RBM(Layer):
-    def __init__(self, shape, H=bernoulli, V=gaussian, params=None, **kwargs):
+    def __init__(self, shape, V=gaussian, params=None, **kwargs):
         """
         """
         self.shape = shape
         self.activ = match_table[H]
         self.p = params
         
-        self.H = H
         self.V = V
         
         self.factors = shape[1]
@@ -36,11 +35,11 @@ class Gated_RBM(Layer):
         self.yf_sz = shape[0][1]*shape[1]
         self.yfshape = (shape[0][1], shape[1])
         
-        self.hf_sz = shape[1]*shape[2]
-        self.hfshape = (shape[2], shape[1])
+        self.fh_sz = shape[1]*shape[2]
+        self.fhshape = (shape[1], shape[2])
         
         self._cum_xy = self.xf_sz + self.yf_sz
-        self._cum_xyh = self._cum_xy + self.hf_sz
+        self._cum_xyh = self._cum_xy + self.fh_sz
         self.size = self._cum_xyh + shape[2]
 
     def __repr__(self):
@@ -79,38 +78,37 @@ class Gated_RBM(Layer):
     def score(self,):
         pass
 
-    def cd1_3way_grad(self, params, inputs, mf_damp, **kwargs):
+    def cd1_3way_grad(self, params, inputs, **kwargs):
         # suggestion: input generator produces 2tuple of
         # input, one matrix X, one matrix Y
         # shape of parameters: first weights from X and Y to Z,
         # then bias for z, then bias for X,Y -- last two are left
         # away for forward model
         g = gzeros(params.shape)
-
+        x, y = inputs
 
         weights_xf = params[:self.xf_sz].reshape(self.xfshape)
         weights_yf = params[self.xf_sz:self._cum_xy].reshape(self.yfshape)
-        weights_fh = params[self._cum_xy:self._cum_xyh].reshape(self.zfshape)
-        bias_z = params[self._cum_xyh:self.size]
+        weights_fh = params[self._cum_xy:self._cum_xyh].reshape(self.fhshape)
+        bias_h = params[self._cum_xyh:self.size]
         bias_x = params[self.size:-self.shape[0][1]]
         bias_y = params[-self.shape[0][1]:]
 
         # TODO: renorm weights!
         
-        factors_x = gdot(inputs, weights_xf) 
-        factors_y = gdot(inputs, weights_yf)
+        factors_x = gdot(x, weights_xf) 
+        factors_y = gdot(y, weights_yf)
         factors = factors_x * factors_y
 
-        h1, h_sampled = bernoulli(factors, wm=weights_fz, bias=bias_h, sampling=True)
-        factors_h = gdot(h_sampled, weights_fz.T)
+        h1, h_sampled = bernoulli(factors, wm=weights_fh, bias=bias_h, sampling=True)
+        factors_h = gdot(h_sampled, weights_fh.T)
 
-        # TODO: two types of inputs!
-        # TODO: check signs!!
-        d_xf = gdot(inputs.T, factors_y*factors_h).ravel()
-        d_yf = gdot(inputs.T factors_x*factors_h).ravel()
-        d_fz = gdot(h_sampled.T, factors).ravel()
-        d_bx = -inputs.sum(axis=0)
-        d_by = -inputs.sum(axis=0)
+        # TODO: sign!!!
+        g[:self.xf_sz] = gdot(x.T, factors_y*factors_h).ravel()
+        g[self.xf_sz:self._cum_xy] = gdot(y.T, factors_x*factors_h).ravel()
+        g[self._cum_xy:sef._cum_xyh] = gdot(h_sampled.T, factors).ravel()
+        d_bx = -x.sum(axis=0)
+        d_by = -y.sum(axis=0)
         d_bz = -h1.sum(axis=0)
 
         # 3way cd
