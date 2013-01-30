@@ -43,6 +43,9 @@ class Gated_RBM(Layer):
         self._cum_xyh = self._cum_xy + self.fh_sz
         self.size = self._cum_xyh + shape[2]
 
+        self.avg_nxyf = 0.
+        self.avg_nfh = 0.
+
     def __repr__(self):
         """
         """
@@ -80,11 +83,8 @@ class Gated_RBM(Layer):
         pass
 
     def cd1_3way_grad(self, params, inputs, **kwargs):
-        # suggestion: input generator produces 2tuple of
-        # input, one matrix X, one matrix Y
-        # shape of parameters: first weights from X and Y to Z,
-        # then bias for z, then bias for X,Y -- last two are left
-        # away for forward model
+        SMALL = 1e-7
+
         g = gzeros(params.shape)
         x, y = inputs
         n, _ = x.shape
@@ -96,8 +96,25 @@ class Gated_RBM(Layer):
         bias_x = params[self.size:-self.shape[0][1]]
         bias_y = params[-self.shape[0][1]:]
 
-        # TODO: renorm weights!
-        
+        # normalize weights
+        sq_xf = weights_xf * weights_xf
+        norm_xf = gpu.sqrt(sq_xf.sum(axis=0)) + SMALL
+        sq_yf = weights_yf * weights_yf
+        norm_yf = gpu.sqrt(sq_yf.sum(axis=0)) + SMALL
+ 
+        norm_xyf = (norm_xf.mean() + norm_yf.mean())/2.
+        self.avg_nxyf *= 0.95
+        self.avg_nxyf += 0.05 * norm_xyf
+        weights_xf *= (self.avg_nxyf * norm_xf)
+        weights_yf *= (self.avg_nxyf * norm_yf)
+
+        sq_fh = weights_fh*weights_fh
+        norm_fh = gpu.sqrt(sq_fh.sum(axis=1)) + SMALL
+        self.avg_nfh *= 0.95
+        self.avg_nfh += 0.05 * norm_fh.mean()
+        weights_fh *= (self.avg_nfh * norm_fh[:, gpu.newaxis])
+        # normalization done
+
         factors_x = gdot(x, weights_xf) 
         factors_y = gdot(y, weights_yf)
         factors = factors_x * factors_y
@@ -111,7 +128,6 @@ class Gated_RBM(Layer):
         g[self._cum_xyh:self.size] = -h.sum(axis=0)
         g[self.size:-self.shape[0][1]] = -x.sum(axis=0) 
         g[-self.shape[0][1]:] = -y.sum(axis=0)
-
 
         # 3way cd
         way = np.random.rand() > 0.5
