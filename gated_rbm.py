@@ -9,6 +9,7 @@ import numpy as np
 
 
 from gnumpy import dot as gdot
+from gnumpy import zeros as gzeros
 from gnumpy import sum as gsum
 import gnumpy as gpu
 
@@ -22,7 +23,7 @@ class Gated_RBM(Layer):
         """
         """
         self.shape = shape
-        self.activ = match_table[H]
+        self.activ = match_table[bernoulli]
         self.p = params
         
         self.V = V
@@ -86,6 +87,7 @@ class Gated_RBM(Layer):
         # away for forward model
         g = gzeros(params.shape)
         x, y = inputs
+        n, _ = x.shape
 
         weights_xf = params[:self.xf_sz].reshape(self.xfshape)
         weights_yf = params[self.xf_sz:self._cum_xy].reshape(self.yfshape)
@@ -100,19 +102,19 @@ class Gated_RBM(Layer):
         factors_y = gdot(y, weights_yf)
         factors = factors_x * factors_y
 
-        h1, h_sampled = bernoulli(factors, wm=weights_fh, bias=bias_h, sampling=True)
+        h, h_sampled = bernoulli(factors, wm=weights_fh, bias=bias_h, sampling=True)
         factors_h = gdot(h_sampled, weights_fh.T)
 
-        # TODO: sign!!!
-        g[:self.xf_sz] = gdot(x.T, factors_y*factors_h).ravel()
-        g[self.xf_sz:self._cum_xy] = gdot(y.T, factors_x*factors_h).ravel()
-        g[self._cum_xy:sef._cum_xyh] = gdot(h_sampled.T, factors).ravel()
-        d_bx = -x.sum(axis=0)
-        d_by = -y.sum(axis=0)
-        d_bz = -h1.sum(axis=0)
+        g[:self.xf_sz] = -gdot(x.T, factors_y*factors_h).ravel()
+        g[self.xf_sz:self._cum_xy] = -gdot(y.T, factors_x*factors_h).ravel()
+        g[self._cum_xy:self._cum_xyh] = -gdot(h_sampled.T, factors).ravel()
+        g[self._cum_xyh:self.size] = -h.sum(axis=0)
+        g[self.size:-self.shape[0][1]] = -x.sum(axis=0) 
+        g[-self.shape[0][1]:] = -y.sum(axis=0)
+
 
         # 3way cd
-        way = np.random.randn() > 0.5
+        way = np.random.rand() > 0.5
         if way:
             # reconstruct y (output) first.
             tmp = factors_x * factors_h
@@ -134,13 +136,26 @@ class Gated_RBM(Layer):
 
 
         factors[:] = factors_x * factors_y
-        h2, _ = bernoulli(factors, wm=weights_hf, bias=bias_h)
-        factors_h = gdot(h2, weights_fz.T)
+        h1, _ = bernoulli(factors, wm=weights_fh, bias=bias_h)
+        factors_h[:] = gdot(h1, weights_fh.T)
 
-        d_xf = gdot(x1.T, factors_y*factors_z).ravel()
-        d_yf = gdot(y1.T factors_x*factors_z).ravel()
-        d_fz = gdot(h2.T, factors).ravel()
-        d_bx = x1.sum(axis=0)
-        d_by = x2.sum(axis=0)
-        d_bz = h2.sum(axis=0)
+
+        g[:self.xf_sz] += gdot(x1.T, factors_y*factors_h).ravel()
+        g[:self.xf_sz] *= 1./n
+        
+        g[self.xf_sz:self._cum_xy] += gdot(y1.T, factors_x*factors_h).ravel()
+        g[self.xf_sz:self._cum_xy] *= 1./n
+
+        g[self._cum_xy:self._cum_xyh] += gdot(h1.T, factors).ravel()
+        g[self._cum_xy:self._cum_xyh] *= 1./n
+
+        g[self._cum_xyh:self.size] += h1.sum(axis=0)
+        g[self._cum_xyh:self.size] *= 1./n
+
+        g[self.size:-self.shape[0][1]] += x1.sum(axis=0)
+        g[self.size:-self.shape[0][1]] *= 1./n
+
+        g[-self.shape[0][1]:] += y1.sum(axis=0)
+        g[-self.shape[0][1]:] *= 1./n
+
         return g
