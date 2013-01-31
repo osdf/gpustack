@@ -66,7 +66,7 @@ class Gated_RBM(Layer):
         pt_params = gzeros(self.size + self.shape[0][0] + self.shape[0][1])
         pt_params[:self._cum_xyh] = init_var * gpu.randn(self._cum_xyh) 
 
-        self.pt_score = self.score
+        self.pt_score = self.reconstruction
         self.pt_grad = self.cd1_3way_grad
 
         self.l2 = l2
@@ -81,6 +81,53 @@ class Gated_RBM(Layer):
 
     def score(self,):
         pass
+
+    def reconstruction(self, params, inputs, **kwargs):
+        """
+        """
+        x, y = inputs
+        n, _ = x.shape
+
+        weights_xf = params[:self.xf_sz].reshape(self.xfshape)
+        weights_yf = params[self.xf_sz:self._cum_xy].reshape(self.yfshape)
+        weights_fh = params[self._cum_xy:self._cum_xyh].reshape(self.fhshape)
+        bias_h = params[self._cum_xyh:self.size]
+        bias_x = params[self.size:-self.shape[0][1]]
+        bias_y = params[-self.shape[0][1]:]
+
+
+        factors_x = gdot(x, weights_xf) 
+        factors_y = gdot(y, weights_yf)
+        factors = factors_x * factors_y
+
+        h, h_sampled = bernoulli(factors, wm=weights_fh, bias=bias_h, sampling=True)
+        factors_h = gdot(h_sampled, weights_fh.T)
+
+        # 3way cd
+        way = np.random.rand() > 0.5
+        if way:
+            # reconstruct y (output) first.
+            tmp = factors_x * factors_h
+            y1, _ = self.V(tmp, wm=weights_yf.T, bias=bias_y, sampling=True)
+            factors_y[:] = gdot(y1, weights_yf)
+            # then reconstruct x (input).
+            tmp = factors_y * factors_h
+            x1, _ = self.V(tmp, wm=weights_xf.T, bias=bias_x, sampling=True)
+        else:
+            # reconstruct x (input) first.
+            tmp = factors_y * factors_h
+            x1, _ = self.V(tmp, wm=weights_xf.T, bias=bias_x, sampling=True)
+            factors_x[:] = gdot(x1, weights_xf)
+            # then reconstruct y (output).
+            tmp = factors_x * factors_h
+            y1, _ = self.V(tmp, wm=weights_yf.T, bias=bias_x, sampling=True)
+
+            rho_hat = h.sum()
+
+            xrec = gsum((x - x1)**2)
+            yrec = gsum((y - y1)**2)
+
+            return np.array([xrec, yrec, rho_hat])
 
     def cd1_3way_grad(self, params, inputs, **kwargs):
         SMALL = 1e-7
@@ -105,14 +152,14 @@ class Gated_RBM(Layer):
         norm_xyf = (norm_xf.mean() + norm_yf.mean())/2.
         self.avg_nxyf *= 0.95
         self.avg_nxyf += 0.05 * norm_xyf
-        weights_xf *= (self.avg_nxyf * norm_xf)
-        weights_yf *= (self.avg_nxyf * norm_yf)
+        weights_xf *= (self.avg_nxyf / norm_xf)
+        weights_yf *= (self.avg_nxyf / norm_yf)
 
         sq_fh = weights_fh*weights_fh
         norm_fh = gpu.sqrt(sq_fh.sum(axis=1)) + SMALL
         self.avg_nfh *= 0.95
         self.avg_nfh += 0.05 * norm_fh.mean()
-        weights_fh *= (self.avg_nfh * norm_fh[:, gpu.newaxis])
+        weights_fh *= (self.avg_nfh / norm_fh[:, gpu.newaxis])
         # normalization done
 
         factors_x = gdot(x, weights_xf) 
@@ -134,27 +181,26 @@ class Gated_RBM(Layer):
         if way:
             # reconstruct y (output) first.
             tmp = factors_x * factors_h
-            y1, _ = self.V(tmp, wm=weights_yf.T, bias=bias_y)
+            y1, _ = self.V(tmp, wm=weights_yf.T, bias=bias_y, sampling=True)
             factors_y[:] = gdot(y1, weights_yf)
             # then reconstruct x (input).
             tmp = factors_y * factors_h
-            x1, _ = self.V(tmp, wm=weights_xf.T, bias=bias_x)
+            x1, _ = self.V(tmp, wm=weights_xf.T, bias=bias_x, sampling=True)
             factors_x[:] = gdot(x1, weights_xf)
         else:
             # reconstruct x (input) first.
             tmp = factors_y * factors_h
-            x1, _ = self.V(tmp, wm=weights_xf.T, bias=bias_x)
+            x1, _ = self.V(tmp, wm=weights_xf.T, bias=bias_x, sampling=True)
             factors_x[:] = gdot(x1, weights_xf)
             # then reconstruct y (output).
             tmp = factors_x * factors_h
-            y1, _ = self.V(tmp, wm=weights_yf.T, bias=bias_x)
+            y1, _ = self.V(tmp, wm=weights_yf.T, bias=bias_x, sampling=True)
             factors_y[:] = gdot(y1, weights_yf)
 
 
         factors[:] = factors_x * factors_y
         h1, _ = bernoulli(factors, wm=weights_fh, bias=bias_h)
         factors_h[:] = gdot(h1, weights_fh.T)
-
 
         g[:self.xf_sz] += gdot(x1.T, factors_y*factors_h).ravel()
         g[:self.xf_sz] *= 1./n
