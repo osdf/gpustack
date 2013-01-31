@@ -73,8 +73,7 @@ class Stack(list):
                 opt_schedule["f"] = layer.pt_score
                 opt_schedule["fprime"] = layer.pt_grad
 
-                opt, iargs, ikwargs, evals = prepare_opt(opt_schedule, schedule, train, valid)
-                opt.__init__(wrt=pt_params, args=izip(iargs, ikwargs), **opt_schedule)
+                opt, evals = prepare_opt(opt_schedule, pt_params, schedule, train, valid)
 
                 stop = opt_schedule["stop"]
                 for j, info in enumerate(opt):
@@ -121,8 +120,7 @@ class Stack(list):
             opt_schedule["f"] = self.score
             opt_schedule["fprime"] = self.grad
 
-            opt, iargs, ikwargs, evals = prepare_opt(opt_schedule, schedule, train, valid)
-            opt.__init__(wrt=self.params, args=izip(iargs, ikwargs), **opt_schedule)
+            opt, evals = prepare_opt(opt_schedule, self.params, schedule, train, valid)
 
             stop = opt_schedule["stop"]
             for i, info in enumerate(opt):
