@@ -13,7 +13,7 @@ import gnumpy as gpu
 
 
 from layer import Layer
-from misc import match_table, cpu_table, bernoulli, gauss
+from misc import match_table, bernoulli, gauss
 from utils import init_SI
 
 
@@ -90,6 +90,16 @@ class GAUSS_RBM(Layer):
         self.prep_layer(pt_params)
         del pt_params
 
+    def _cpuify(self, _params):
+        """
+        """
+        prec = _params[-self.shape[0]:][:, np.newaxis]
+        wm = prec*_params[:self.m_end].reshape(self.shape)
+        self._params = np.zeros(self.m_end + self.shape[1])
+        self._params[:self.m_end] = wm.ravel()
+        self._params[-self.shape[1]:] = _params[self.m_end:self.m_end+self.shape[1]]
+        self.cpuify = True
+
     def reconstruction(self, params, inputs, **kwargs):
         """
         """
@@ -105,7 +115,7 @@ class GAUSS_RBM(Layer):
         rho_hat = h1.sum()
         rec = gsum((inputs - v_sampled)**2)
         
-        return np.array([rec, rho_hat])
+        return np.array([rec, self.lmbd*rho_hat])
 
     def grad_cd1(self, params, inputs, **kwargs):
         """
@@ -122,7 +132,7 @@ class GAUSS_RBM(Layer):
 
         h1, h_sampled = self.H(inputs, wm=prec*wm, bias=params[m_end:m_end+H], sampling=True)
         v2, v_sampled = gauss(h_sampled, wm=(wm/prec).T, bias=params[-(2*V):-V], prec=prec.T, sampling=True)
-        h2, _ = self.H(v_sampled, wm=prec*wm, bias=params[m_end:m_end+H])
+        h2, _ = self.H(v2, wm=prec*wm, bias=params[m_end:m_end+H])
 
         #print h1[0,0], h_sampled[0,0], v2[0,0], v_sampled[0,0]
         # Note the negative sign: the gradient is 
