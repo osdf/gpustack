@@ -237,6 +237,7 @@ def roc_fp95(depot, folders=None):
         for match in glob.glob(path+"/*.roc.pickle"):
             rocf = open(match)
             roc = cPickle.load(rocf)
+            rocf.close()
             # iterate over evaluation sets
             for e in roc.keys():
                 eset = roc[e]
