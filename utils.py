@@ -16,6 +16,7 @@ from gnumpy import newaxis as gnewaxis
 from gnumpy import exp as gexp
 from gnumpy import log as glog
 import chopmunk as munk
+import climin.util
 
 
 def _cycle(data, btsz):
@@ -139,15 +140,10 @@ def _logsumexp(array, axis=0):
     return axis_max + np.log(np.sum(np.exp(array-axis_max), axis))[:, np.newaxis]
 
 
-def prepare_opt(opt_schedule, schedule, train, valid):
+def prepare_opt(opt_schedule, wrt, schedule, train, valid):
     # iargs, a generator passed to climin optimizer,
     # is build out of generators on the fly -- needs to know what
     # parameters those generators must be called with.
-    
-    otype = opt_schedule["type"]
-    opt = otype.__new__(otype)
-    opt_keys = opt_schedule.keys()
-
     opt_schedule["inputs"] = train[0]
     opt_schedule["targets"] = train[1]
 
@@ -170,17 +166,25 @@ def prepare_opt(opt_schedule, schedule, train, valid):
 
     evals = eval_opt(opt_schedule)
 
+    opt_keys = opt_schedule.keys()
     for arg in opt_schedule["iargs"]:
         needed_args = external_iargs[arg]
         for n in needed_args:
             if n in opt_schedule and n not in opt_keys:
                 del opt_schedule[n]
-    return opt, iargs, ikwargs, evals
+    # get optimizer
+    opt = opt_schedule["type"]
+    opt_schedule["args"] = izip(iargs, ikwargs)
+    opt = climin.util.optimizer(opt, wrt, **opt_schedule)
+    return opt, evals
 
 
 def eval_opt(schedule):
     btsz = schedule["btsz"]
-    score = schedule["f"]
+    if "eval_score" in schedule:
+        score = schedule["eval_score"]
+    else:
+        score = schedule["f"]
     evals = {}
 
     for e in schedule["eval"]:
@@ -225,29 +229,34 @@ def load_params(fname):
     return d
 
 
-def log_queue(log_to):
-    # standard logfile
-    jlog = munk.file_sink(log_to+".log")
-    jlog = munk.jsonify(jlog)
-    jlog = munk.timify(jlog, tag="timestamp")
-    jlog = munk.exclude(jlog, "params")
+def log_queue(log_to=None):
+    if log_to:
+        # standard logfile
+        jlog = munk.file_sink(log_to+".log")
+        jlog = munk.jsonify(jlog)
+        jlog = munk.timify(jlog, tag="timestamp")
+        jlog = munk.exclude(jlog, "params")
 
-    # parameter logfile
-    paraml = munk.file_sink(log_to+".params")
-    paraml = munk.jsonify(paraml)
-    paraml = munk.timify(paraml, tag="timestamp")
-    paraml = munk.include(paraml, "params")
+        # parameter logfile
+        paraml = munk.file_sink(log_to+".params")
+        paraml = munk.jsonify(paraml)
+        paraml = munk.timify(paraml, tag="timestamp")
+        paraml = munk.include(paraml, "params")
 
-    jplog = munk.broadcast(*[jlog, paraml])
+        jplog = munk.broadcast(*[jlog, paraml])
 
-    # finally a pretty printer for some immediate feedback
-    pp = munk.timify(munk.prettyprint_sink())
-    pp = munk.dontkeep(pp, "tags")
-    pp = munk.include_tags_only(pp, "pretty")
+        # finally a pretty printer for some immediate feedback
+        pp = munk.timify(munk.prettyprint_sink())
+        pp = munk.dontkeep(pp, "tags")
+        pp = munk.include_tags_only(pp, "pretty")
 
-    jplog = munk.exclude_tags(jplog, "pretty")
+        jplog = munk.exclude_tags(jplog, "pretty")
 
-    log = munk.broadcast(*[jplog, pp])
+        log = munk.broadcast(*[jplog, pp])
+    else:
+        pp = munk.timify(munk.prettyprint_sink())
+        pp = munk.dontkeep(pp, "tags")
+        log = munk.include_tags_only(pp, "pretty")
     return log
 
 
