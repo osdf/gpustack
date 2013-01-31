@@ -10,7 +10,7 @@ sys.path.append("../")
 import types
 import hashlib, shutil
 import cPickle
-import os, glob, shutil
+import os, glob
 from os.path import join, exists
 from time import strftime
 import json
@@ -148,7 +148,6 @@ def prepare(schedule, depot="depot") :
 def reload(depot, folder, tag, layer):
     """
     """
-    import dispatch
     import utils
     
     cwd = os.getcwd()

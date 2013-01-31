@@ -5,6 +5,8 @@ acyclic computation graphs.
 
 
 import numpy as np
+
+
 from gnumpy import dot as gdot
 from gnumpy import zeros as gzeros
 import gnumpy as gpu
@@ -12,6 +14,7 @@ import gnumpy as gpu
 
 from misc import diff_table, cpu_table, str_table
 from utils import init_SI
+
 
 class Layer(object):
     def __init__(self, shape, activ, params=None, dropout=None, **kwargs):
