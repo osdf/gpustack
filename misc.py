@@ -103,8 +103,8 @@ def nrelu(data, wm, bias, sampling=False):
     """
     suff = gpu.dot(data, wm) + bias
     if sampling:
-        #sample = suff + (gpu.sqrt(suff.logistic()) * gpu.randn(suff.shape))
-        sample = suff + gpu.randn(suff.shape)
+        sample = suff + (gpu.sqrt(suff.logistic()) * gpu.randn(suff.shape))
+        #sample = suff + gpu.randn(suff.shape)
         sample *= (sample > 0)
     else:
         sample = None
