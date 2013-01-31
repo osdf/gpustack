@@ -20,6 +20,7 @@ class Layer(object):
         self.activ = activ
         self.p = params
         self.size = shape[0]*shape[1] + shape[1]
+        self.cpuify = False
         if dropout is not None and dropout > 0:
             assert(0 < dropout < 1), "Dropout needs to be in (0,1)."
             self.dropout = dropout
@@ -124,6 +125,9 @@ class Layer(object):
         return g
 
     def _fward(self, data):
-        _params = self.p.as_numpy_array()
+        if self.cpuify:
+            _params = self._params
+        else:
+            _params = self.p.as_numpy_array()
         _a = np.dot(data, _params[:self.m_end].reshape(self.shape)) + _params[self.m_end:]
         return cpu_table[self.activ](_a)
