@@ -53,6 +53,15 @@ def cycle_trgt(targets, btsz, **kwargs):
         yield garray(targets[idx:idx_p1])
 
 
+def cycle_pairs(pairs, btsz, **kwargs):
+    """
+    """
+    p0, p1 = pairs[0], pairs[1]
+    bg, end = _cycle(p0, btsz)
+    for idx, idx_p1 in izip(bg, end):
+        yield (garray(p0[idx:idx_p1]), garray(p1[idx:idx_p1]))
+
+
 def jump(frm, to, when):
     i = 0
     while True:

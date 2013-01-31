@@ -177,19 +177,48 @@ def clean_up(depot, ending=".roc.pickle", files=None):
     """
     Clean up _depot_: All folders that are
     having no file ending in _ending_ are
-    deleted.
+    deleted. Additionally, some experiments
+    where run several times, but not every experiment
+    produced a file in _ending_. Clean up those
+    runs, too, filewise.
     """
     if files is None:
         files = []
         for root, dn, fnames in os.walk(depot):
             if root == depot:
                 continue
-            if len(fnmatch.filter(fnames, "*"+ending)) == 0:
+            rocs = fnmatch.filter(fnames, "*"+ending)
+            if len(rocs) == 0:
                 files.append(root)
+            else:
+                # at least one file with _ending_ exists
+                # make sure that no other unnecessary files
+                # are available -- note that a '.schedule' file
+                # only is available once, don't delete it.
+                for f in fnames:
+                    if f.endswith(".schedule"):
+                        continue
+
+                    if f.split('.')[0]+ending not in rocs:
+                        files.append(join(root, f))
+        if len(files) > 0:
+            print("Note: there are possible deletions found, please double check!!!")
+        else:
+            print("No files for deletion found!")
         return files
     else:
+        # make sure that caller knows what's going on
+        print("Deleting files provided by caller!")
+        yesno = raw_input("Continue (y/N)? ")
+        if yesno != 'y':
+            print("Received something different from 'y', aborting")
+            return
+
         for f in files:
-            shutil.rmtree(f)
+            if os.path.isdir(f):
+                shutil.rmtree(f)
+            else:
+                os.remove(f)
 
 
 def roc_fp95(depot, folders=None):
@@ -207,24 +236,28 @@ def roc_fp95(depot, folders=None):
         for match in glob.glob(path+"/*.roc.pickle"):
             rocf = open(match)
             roc = cPickle.load(rocf)
+            # iterate over evaluation sets
             for e in roc.keys():
                 eset = roc[e]
-                for size in eset.keys():
-                    sset = eset[size]
-                    for dist in sset.keys():
-                        fp95 = sset[dist]['fp_at_95']
+                # iterator over different sizes of evaluation pairs
+                for pairs in eset.keys():
+                    pairset = eset[pairs]
+                    for dist in pairset.keys():
+                        fp95 = pairset[dist]['fp_at_95']
+                        if fp95 < 0.1:
+                            print("fp rate ridiculously low, ignoring it")
+                            continue
                         if e in res:
                             best = res[e].keys()[0]
                             if fp95 < best:
-                                res[e] = {fp95: [f, size, dist]}
+                                res[e] = {fp95: [f, pairs, dist]}
                         else:
-                            res[e] = {fp95: [f, size, dist]}
+                            res[e] = {fp95: [f, pairs, dist]}
     return res
 
 
 def grep_log(logfile, field, constraints={}):
     f = open(logfile)
-    grep = {}
     res = []
     for line in f:
         jline = json.loads(line)
