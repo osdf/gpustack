@@ -19,29 +19,29 @@ from misc import match_table, gaussian, bernoulli
 
 
 class Gated_RBM(Layer):
-    def __init__(self, shape, V=gaussian, params=None, **kwargs):
+    def __init__(self, shape, factors, V=gaussian, params=None, **kwargs):
         """
         """
-        self.shape = shape
+        self.shape = (shape[0], factors, shape[1])
         self.activ = match_table[bernoulli]
         self.p = params
         
         self.V = V
         
-        self.factors = shape[1]
+        self.factors = factors
         # several helpers
-        self.xf_sz = shape[0][0]*shape[1]
-        self.xfshape = (shape[0][0], shape[1])
+        self.xf_sz = shape[0][0]*factors
+        self.xfshape = (shape[0][0], factors)
 
-        self.yf_sz = shape[0][1]*shape[1]
-        self.yfshape = (shape[0][1], shape[1])
+        self.yf_sz = shape[0][1]*factors
+        self.yfshape = (shape[0][1], factors)
         
-        self.fh_sz = shape[1]*shape[2]
-        self.fhshape = (shape[1], shape[2])
+        self.fh_sz = factors*shape[1]
+        self.fhshape = (factors, shape[1])
         
         self._cum_xy = self.xf_sz + self.yf_sz
         self._cum_xyh = self._cum_xy + self.fh_sz
-        self.size = self._cum_xyh + shape[2]
+        self.size = self._cum_xyh + shape[1]
 
         self.avg_nxyf = 0.
         self.avg_nfh = 0.
