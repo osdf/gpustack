@@ -54,10 +54,10 @@ def cycle_trgt(targets, btsz, **kwargs):
         yield garray(targets[idx:idx_p1])
 
 
-def cycle_pairs(pairs, btsz, **kwargs):
+def cycle_pairs(inputs, btsz, **kwargs):
     """
     """
-    p0, p1 = pairs[0], pairs[1]
+    p0, p1 = inputs[0], inputs[1]
     bg, end = _cycle(p0, btsz)
     for idx, idx_p1 in izip(bg, end):
         yield (garray(p0[idx:idx_p1]), garray(p1[idx:idx_p1]))
@@ -118,10 +118,15 @@ def range_noisy_inpt(inputs, btsz, noise, **kwargs):
     return noisify
 
 
+def range_pairs(inputs, btsz, **kwargs):
+    return lambda idx: (garray(inputs[0][idx:idx+btsz]), garray(inputs[1][idx:idx+btsz]))
+
+
 external_iargs = {
     cycle_inpt: {"inputs": "inputs"}
     ,cycle_noisy_inpt: {"inputs": "inputs", "noise": "noise"}
     ,cycle_trgt: {"targets": "targets"}
+    ,cycle_pairs: {"inputs": "inputs"}
 }
 
 
@@ -129,6 +134,7 @@ finite_arg = {
     cycle_inpt: range_inpt
     ,cycle_noisy_inpt: range_noisy_inpt
     ,cycle_trgt: range_trgt
+    ,cycle_pairs: range_pairs
 }
 
 
@@ -206,7 +212,10 @@ def eval_opt(schedule):
 
         def loss(wrt, inputs=inputs, args=args):
             acc = 0
-            N = inputs.shape[0]
+            if type(inputs) is tuple:
+                N = inputs[0].shape[0]
+            else:
+                N = inputs.shape[0]
             for idx in xrange(0, N - btsz + 1, btsz):
                 acc += score(wrt, *[arg(idx) for arg in args])
             return acc

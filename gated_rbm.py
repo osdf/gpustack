@@ -50,8 +50,7 @@ class Gated_RBM(Layer):
         """
         """
         vrep = str(self.V).split()[1]
-        hrep = str(self.H).split()[1]
-        rep = "FGRBM-%s-%s-%s-[sparsity--%s:%s]"%(vrep, hrep, self.shape, self.lmbd, self.rho)
+        rep = "FGRBM-%s-%s-[sparsity--%s:%s]"%(vrep, self.shape, self.lmbd, self.rho)
         return rep
 
     def fward(self, params, data):
@@ -60,7 +59,7 @@ class Gated_RBM(Layer):
     def _fward(self, data):
         pass
 
-    def pt_init(self, init_var=1e-2, init_bias=0., rho=0.5, lmbd=0., l2=0.):
+    def pt_init(self, init_var=1e-2, init_bias=0., avg_nxyf=0.1, avg_nfh=0.1, rho=0.5, lmbd=0., l2=0., **kwargs):
         """
         """
         pt_params = gzeros(self.size + self.shape[0][0] + self.shape[0][1])
@@ -69,15 +68,23 @@ class Gated_RBM(Layer):
         self.pt_score = self.reconstruction
         self.pt_grad = self.cd1_3way_grad
 
+        self.avg_nxyf = avg_nxyf
+        self.avg_nfh = avg_nfh
+
         self.l2 = l2
         self.rho = rho
         self.lmbd = lmbd
         self.rho_hat = None
-
+        
         return pt_params
 
-    def pt_done(self):
-        pass
+    def pt_done(self, pt_params, **kwargs):
+        _params = pt_params.as_numpy_array().tolist()
+        info = dict({"params": _params, "shape": self.shape})
+
+        self.p[:] = pt_params[:self.size]
+
+        return info
 
     def score(self,):
         pass
@@ -122,12 +129,12 @@ class Gated_RBM(Layer):
             tmp = factors_x * factors_h
             y1, _ = self.V(tmp, wm=weights_yf.T, bias=bias_x, sampling=True)
 
-            rho_hat = h.sum()
+        rho_hat = h.sum()
 
-            xrec = gsum((x - x1)**2)
-            yrec = gsum((y - y1)**2)
+        xrec = gsum((x - x1)**2)
+        yrec = gsum((y - y1)**2)
 
-            return np.array([xrec, yrec, rho_hat])
+        return np.array([xrec, yrec, self.lmbd*rho_hat, self.avg_nxyf, self.avg_nfh])
 
     def cd1_3way_grad(self, params, inputs, **kwargs):
         SMALL = 1e-7
