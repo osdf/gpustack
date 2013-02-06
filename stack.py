@@ -47,7 +47,11 @@ class Stack(list):
         self.cuts = np.cumsum(cuts)
         for layer, (c1, c2) in izip(self, izip(self.cuts[:-1], self.cuts[1:])):
             layer.p = self.params[c1:c2]
-        self._score = schedule["score"]
+        if "score" in schedule:
+            self._score = schedule["score"]
+        else:
+            print("You may have a problem: _score_ is NONE")
+            self._score = None
 
     def __repr__(self):
         rep = "|".join([str(l) for l in self])

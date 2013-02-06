@@ -133,7 +133,7 @@ class Gated_RBM(Layer):
             factors_x[:] = gdot(x1, weights_xf)
             # then reconstruct y (output).
             tmp = factors_x * factors_h
-            y1, _ = self.V(tmp, wm=weights_yf.T, bias=bias_x)
+            y1, _ = self.V(tmp, wm=weights_yf.T, bias=bias_y)
 
         xrec = gsum((x - x1)**2)
         yrec = gsum((y - y1)**2)
@@ -207,7 +207,7 @@ class Gated_RBM(Layer):
             factors_x[:] = gdot(x1, weights_xf)
             # then reconstruct y (output).
             tmp = factors_x * factors_h
-            y1, _ = self.V(tmp, wm=weights_yf.T, bias=bias_x)
+            y1, _ = self.V(tmp, wm=weights_yf.T, bias=bias_y)
             factors_y[:] = gdot(y1, weights_yf)
 
         factors[:] = factors_x * factors_y
@@ -215,7 +215,7 @@ class Gated_RBM(Layer):
         factors_h[:] = gdot(h1, weights_fh.T)
 
         g[:self.xf_sz] += gdot(x1.T, factors_y*factors_h).ravel()
-        g[:self.xf_sz] /= n
+        g[:self.xf_sz] *= 1./n
 
         g[self.xf_sz:self._cum_xy] += gdot(y1.T, factors_x*factors_h).ravel()
         g[self.xf_sz:self._cum_xy] *= 1./n
