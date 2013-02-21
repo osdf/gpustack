@@ -24,6 +24,24 @@ def ssd(z, targets, weight=0.5, predict=False, error=False, addon=0):
         return weight*gpu.sum(err**2)/n + addon
 
 
+def rmssd(z, targets, predict=False, error=False, addon=0):
+    """
+    Root mean sum of squares.
+    """
+    if predict:
+        return z
+    n, m = z.shape
+    err = z - targets
+    per_sample = gpu.sqrt(gpu.sum(err**2, axis=1))
+
+    if error:
+        # rec. error + first deriv
+        return gpu.sum(per_sample)/n + addon, err/(n*per_sample[:, gpu.newaxis])
+    else:
+        # only return reconstruction error 
+        return gpu.sum(per_sample)/n + addon
+
+
 def mia(z, targets, predict=False, error=False, addon=0, tiny=1e-10):
     """
     Multiple independent attributes (i.e. independent
