@@ -46,6 +46,17 @@ def cycle_noisy_inpt(inputs, btsz, noise, **kwargs):
         yield garray(noisify)
 
 
+def cycle_gaussian_inpt(inputs, btsz, std, **kwargs):
+    """
+    """
+    bgn, end = _cycle(inputs, btsz)
+    for idx, idx_p1 in izip(bgn, end):
+        _inputs = inputs[idx:idx_p1]
+        noisify = np.random.randn(*_inputs.shape)
+        noisify *= _inputs
+        yield garray(noisify)
+
+
 def cycle_trgt(targets, btsz, **kwargs):
     """
     """
