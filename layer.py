@@ -19,17 +19,18 @@ from utils import init_SI
 class Layer(object):
     def __init__(self, shape, activ, params=None, dropout=None, **kwargs):
         self.shape = shape
-        self.m_end = shape[0]*shape[1]
+        self.m_end = shape[0] * shape[1]
         self.activ = activ
         self.p = params
-        self.size = shape[0]*shape[1] + shape[1]
+        self.size = shape[0] * shape[1] + shape[1]
         self.cpuify = False
         if dropout is not None and dropout > 0:
             assert(0 < dropout < 1), "Dropout needs to be in (0,1)."
             self.dropout = dropout
+            self.fward = self.fward_dropout
             self.fprop = self.fprop_dropout
-            self.bprop  = self.bprop_dropout
-        elif dropout is not None and dropout < 0:
+            self.bprop = self.bprop_dropout
+        elif dropout is not None:
             # negative dropout: want to have spikey neurons
             self.fprop = self.fprop_spike
 
@@ -38,14 +39,20 @@ class Layer(object):
             _score = "no_score"
         else:
             _score = str(self.score).split()[1]
-        return "Layer-%s-%s-%s"%(_score, str_table[self.activ], self.shape)
+        return "Layer-%s-%s-%s" % (_score, str_table[self.activ], self.shape)
 
     def fward(self, params, data):
-        return self.activ(gdot(data, params[:self.m_end].reshape(self.shape)) + params[self.m_end:])
+        return self.activ(gdot(data, params[:self.m_end].reshape(self.shape))\
+                + params[self.m_end:])
+
+    def fward_dropout(self, params, data):
+        return self.dropout * self.activ(gdot(data,\
+                params[:self.m_end].reshape(self.shape)) + params[self.m_end:])
 
     def fprop(self, params, data):
         self.data = data
-        self.Z = self.activ(gdot(data, params[:self.m_end].reshape(self.shape)) + params[self.m_end:])
+        self.Z = self.activ(gdot(data, params[:self.m_end].reshape(self.shape))\
+                + params[self.m_end:])
         return self.Z
 
     def bprop(self, params, grad, delta):
