@@ -81,6 +81,90 @@ def xe(z, targets, predict=False, error=False, addon=0):
         return xe + addon
 
 
+def l2svm_mia(z, targets, predict=False, error=False, addon=0):
+    """
+    l2-SVM for the hinge loss, Multiple independent attributes
+    addon, weight
+    Note: the targets here are (1, -1)
+    """
+    if predict:
+        # argmax_t(z*t)
+        t = z > 0
+        t = gpu.where(t == 0, -1, t)
+        return t
+
+    _maximum = (1 - z * targets)
+    _maximum = gpu.where(_maximum < 0, 0, _maximum)
+    if error:
+        # return gpu.sum(_maximum ** 2, axis=1), \
+        #     gpu.sum(-2 * targets * _maximum, axis=1)
+        return gpu.sum(_maximum ** 2), -2 * targets * _maximum
+    else:
+        # return gpu.sum(_maximum ** 2, axis=1)
+        return gpu.sum(_maximum ** 2)
+
+
+def l1svm_mia(z, targets, predict=False, error=False, addon=0):
+    """
+    l1-SVM for the hinge loss, Multiple independent attributes
+    addon, weight
+    Note: the targets here are (1, -1)
+    """
+    if predict:
+        # argmax_t(z*t)
+        t = z > 0
+        t = gpu.where(t == 0, -1, t)
+        return t
+
+    _maximum = (1 - z * targets)
+    _maximum = gpu.where(_maximum < 0, 0, _maximum)
+    _indicator = _maximum > 0
+    if error:
+        return gpu.sum(_maximum), targets * _indicator
+    else:
+        return gpu.sum(_maximum)
+
+
+def l2svm_x(z, targets, predict=False, error=False, addon=0):
+    """
+    l2-SVM for the hinge loss, cross(mutual exclusive)
+    addon, weight
+    Note: the targets here are (1, -1)
+    """
+    if predict:
+        # argmax(z)
+        return gpu.argmax(z, axis=1)
+
+    _maximum = (1 - z * targets)
+    _maximum = gpu.where(_maximum < 0, 0, _maximum)
+    if error:
+        # return gpu.sum(_maximum ** 2, axis=1), \
+        #     gpu.sum(-2 * targets * _maximum, axis=1)
+        return gpu.sum(_maximum ** 2), -2 * targets * _maximum
+    else:
+        # return gpu.sum(_maximum ** 2, axis=1)
+        return gpu.sum(_maximum ** 2)
+
+
+def l1svm_x(z, targets, predict=False, error=False, addon=0):
+    """
+    l1-SVM for the hinge loss, cross(mutual exclusive)
+    addon, weight
+    Note: the targets here are (1, -1)
+    """
+    if predict:
+        # argmax(z)
+        return gpu.argmax(z, axis=1)
+
+    _maximum = (1 - z * targets)
+    _maximum = gpu.where(_maximum < 0, 0, _maximum)
+    _indicator = _maximum > 0
+    if error:
+        return gpu.sum(_maximum), targets * _indicator
+    else:
+        return gpu.sum(_maximum)
+
+
 def zero_one(z, targets):
     """
     """
@@ -143,8 +227,79 @@ def _xe(z, targets, predict=False, error=False, addon=0):
         return xe + addon
 
 
+def _l2svm_mia(z, targets, predict=False, error=False, addon=0):
+    """
+    Note: the targets here are (1, -1)
+    """
+    if predict:
+        # argmax_t(z*t)
+        t = z > 0
+        t = np.where(t == 0, -1, t)
+        print t
+        return t
+
+    _maximum = np.maximum(1 - z * targets, 0)
+    if error:
+        return np.sum(_maximum ** 2), -2 * targets * _maximum
+    else:
+        return np.sum(_maximum ** 2)
+
+
+def _l1svm_mia(z, targets, predict=False, error=False, addon=0):
+    """
+    Note: the targets here are (1, -1)
+    """
+    if predict:
+        # argmax_t(z*t)
+        t = z > 0
+        t = np.where(t == 0, -1, t)
+        return t
+
+    _maximum = np.maximum(1 - z * targets, 0)
+    _indicator = _maximum > 0
+    if error:
+        return np.sum(_maximum), targets * _indicator
+    else:
+        return np.sum(_maximum)
+
+
+def _l2svm_x(z, targets, predict=False, error=False, addon=0):
+    """
+    Note: the targets here are (1, -1)
+    """
+    if predict:
+        # argmax(z)
+        return np.argmax(z, axis=1)
+
+    _maximum = np.maximum(1 - z * targets, 0)
+    if error:
+        return np.sum(_maximum ** 2), -2 * targets * _maximum
+    else:
+        return np.sum(_maximum ** 2)
+
+
+def _l1svm_x(z, targets, predict=False, error=False, addon=0):
+    """
+    Note: the targets here are (1, -1)
+    """
+    if predict:
+        # argmax(z)
+        return np.argmax(z, axis=1)
+
+    _maximum = np.maximum(1 - z * targets, 0)
+    _indicator = _maximum > 0
+    if error:
+        return np.sum(_maximum), targets * _indicator
+    else:
+        return np.sum(_maximum)
+
+
 loss_table = {
-        ssd: _ssd,
-        mia: _mia,
-        xe: _xe
-    }
+    ssd: _ssd,
+    mia: _mia,
+    xe: _xe,
+    l2svm_mia: _l2svm_mia,
+    l1svm_mia: _l1svm_mia,
+    l2svm_x: _l2svm_x,
+    l1svm_x: _l1svm_x
+}
