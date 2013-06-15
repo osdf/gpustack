@@ -120,7 +120,7 @@ def l1svm_mia(z, targets, predict=False, error=False, addon=0):
     _maximum = gpu.where(_maximum < 0, 0, _maximum)
     _indicator = _maximum > 0
     if error:
-        return gpu.sum(_maximum), targets * _indicator
+        return gpu.sum(_maximum), -targets * _indicator
     else:
         return gpu.sum(_maximum)
 
@@ -160,7 +160,7 @@ def l1svm_x(z, targets, predict=False, error=False, addon=0):
     _maximum = gpu.where(_maximum < 0, 0, _maximum)
     _indicator = _maximum > 0
     if error:
-        return gpu.sum(_maximum), targets * _indicator
+        return gpu.sum(_maximum), -targets * _indicator
     else:
         return gpu.sum(_maximum)
 
@@ -235,7 +235,6 @@ def _l2svm_mia(z, targets, predict=False, error=False, addon=0):
         # argmax_t(z*t)
         t = z > 0
         t = np.where(t == 0, -1, t)
-        print t
         return t
 
     _maximum = np.maximum(1 - z * targets, 0)
@@ -258,7 +257,7 @@ def _l1svm_mia(z, targets, predict=False, error=False, addon=0):
     _maximum = np.maximum(1 - z * targets, 0)
     _indicator = _maximum > 0
     if error:
-        return np.sum(_maximum), targets * _indicator
+        return np.sum(_maximum), -targets * _indicator
     else:
         return np.sum(_maximum)
 
@@ -289,7 +288,7 @@ def _l1svm_x(z, targets, predict=False, error=False, addon=0):
     _maximum = np.maximum(1 - z * targets, 0)
     _indicator = _maximum > 0
     if error:
-        return np.sum(_maximum), targets * _indicator
+        return np.sum(_maximum), -targets * _indicator
     else:
         return np.sum(_maximum)
 
