@@ -95,10 +95,19 @@ def l2svm_mia(z, targets, predict=False, error=False, addon=0):
 
     _maximum = (1 - z * targets)
     _maximum = gpu.where(_maximum < 0, 0, _maximum)
+
+    # diff C for unbalance dataset
+    n, _ = targets.shape
+    _positive = gpu.sum((targets + 1.) / 2, axis=0)
+    _negtive = n - _positive
+    _ratio = (_negtive + 1) / (_positive + 1)
+    _ratio = _ratio * targets
+    _ratio = gpu.where(_ratio < 0, 1, _ratio)
+
     if error:
-        return gpu.sum(_maximum ** 2), -2 * targets * _maximum
+        return gpu.sum(_maximum ** 2 * _ratio), -2 * targets * _maximum * _ratio
     else:
-        return gpu.sum(_maximum ** 2)
+        return gpu.sum(_maximum ** 2 * _ratio)
 
 
 def l1svm_mia(z, targets, predict=False, error=False, addon=0):
@@ -116,10 +125,19 @@ def l1svm_mia(z, targets, predict=False, error=False, addon=0):
     _maximum = (1 - z * targets)
     _maximum = gpu.where(_maximum < 0, 0, _maximum)
     _indicator = _maximum > 0
+
+    # diff C for unbalance dataset
+    n, _ = targets.shape
+    _positive = gpu.sum((targets + 1.) / 2, axis=0)
+    _negtive = n - _positive
+    _ratio = (_negtive + 1) / (_positive + 1)
+    _ratio = _ratio * targets
+    _ratio = gpu.where(_ratio < 0, 1, _ratio)
+
     if error:
-        return gpu.sum(_maximum), -targets * _indicator
+        return gpu.sum(_maximum * _ratio), -targets * _indicator * _ratio
     else:
-        return gpu.sum(_maximum)
+        return gpu.sum(_maximum * _ratio)
 
 
 def l2svm_x(z, targets, predict=False, error=False, addon=0):
@@ -131,15 +149,24 @@ def l2svm_x(z, targets, predict=False, error=False, addon=0):
     if predict:
         # argmax(z)
         return gpu.argmax(z, axis=1)
+
     n, m = z.shape
     _targets = -1 * gpu.ones((n, m))
     _targets[np.arange(n), targets] += 2
     _maximum = (1 - z * _targets)
     _maximum = gpu.where(_maximum < 0, 0, _maximum)
+
+    # diff C for unbalance dataset
+    _positive = gpu.sum((_targets + 1.) / 2, axis=0)
+    _negtive = n - _positive
+    _ratio = (_negtive + 1) / (_positive + 1) / (m - 1)
+    _ratio = _ratio * _targets
+    _ratio = gpu.where(_ratio < 0, 1, _ratio)
+
     if error:
-        return gpu.sum(_maximum ** 2), -2 * _targets * _maximum
+        return gpu.sum(_maximum ** 2 * _ratio), -2 * _targets * _maximum * _ratio
     else:
-        return gpu.sum(_maximum ** 2)
+        return gpu.sum(_maximum ** 2 * _ratio)
 
 
 def l1svm_x(z, targets, predict=False, error=False, addon=0):
@@ -158,10 +185,18 @@ def l1svm_x(z, targets, predict=False, error=False, addon=0):
     _maximum = (1 - z * _targets)
     _maximum = gpu.where(_maximum < 0, 0, _maximum)
     _indicator = _maximum > 0
+
+    # diff C for unbalance dataset
+    _positive = gpu.sum((_targets + 1.) / 2, axis=0)
+    _negtive = n - _positive
+    _ratio = (_negtive + 1) / (_positive + 1) / (m - 1)
+    _ratio = _ratio * _targets
+    _ratio = gpu.where(_ratio < 0, 1, _ratio)
+
     if error:
-        return gpu.sum(_maximum), -_targets * _indicator
+        return gpu.sum(_maximum * _ratio), -_targets * _indicator * _ratio
     else:
-        return gpu.sum(_maximum)
+        return gpu.sum(_maximum * _ratio)
 
 
 def zero_one(z, targets):
@@ -237,10 +272,19 @@ def _l2svm_mia(z, targets, predict=False, error=False, addon=0):
         return t
 
     _maximum = np.maximum(1 - z * targets, 0)
+
+    # diff C for unbalance dataset
+    n, _ = targets.shape
+    _positive = np.sum((targets + 1.) / 2, axis=0)
+    _negtive = n - _positive
+    _ratio = (_negtive + 1) / (_positive + 1)
+    _ratio = _ratio * targets
+    _ratio = np.where(_ratio < 0, 1, _ratio)
+
     if error:
-        return np.sum(_maximum ** 2), -2 * targets * _maximum
+        return np.sum(_maximum ** 2 * _ratio), -2 * targets * _maximum * _ratio
     else:
-        return np.sum(_maximum ** 2)
+        return np.sum(_maximum ** 2 * _ratio)
 
 
 def _l1svm_mia(z, targets, predict=False, error=False, addon=0):
@@ -255,10 +299,19 @@ def _l1svm_mia(z, targets, predict=False, error=False, addon=0):
 
     _maximum = np.maximum(1 - z * targets, 0)
     _indicator = _maximum > 0
+
+    # diff C for unbalance dataset
+    n, _ = targets.shape
+    _positive = np.sum((targets + 1.) / 2, axis=0)
+    _negtive = n - _positive
+    _ratio = (_negtive + 1) / (_positive + 1)
+    _ratio = _ratio * targets
+    _ratio = np.where(_ratio < 0, 1, _ratio)
+
     if error:
-        return np.sum(_maximum), -targets * _indicator
+        return np.sum(_maximum * _ratio), -targets * _indicator * _ratio
     else:
-        return np.sum(_maximum)
+        return np.sum(_maximum * _ratio)
 
 
 def _l2svm_x(z, targets, predict=False, error=False, addon=0):
@@ -272,10 +325,18 @@ def _l2svm_x(z, targets, predict=False, error=False, addon=0):
     _targets = -1 * np.ones((n, m))
     _targets[np.arange(n), targets] = 1
     _maximum = np.maximum(1 - z * _targets, 0)
+
+    # diff C for unbalance dataset
+    _positive = np.sum((_targets + 1.) / 2, axis=0)
+    _negtive = n - _positive
+    _ratio = (_negtive + 1) / (_positive + 1) / (m - 1)
+    _ratio = _ratio * _targets
+    _ratio = np.where(_ratio < 0, 1, _ratio)
+
     if error:
-        return np.sum(_maximum ** 2), -2 * _targets * _maximum
+        return np.sum(_maximum ** 2 * _ratio), -2 * _targets * _maximum * _ratio
     else:
-        return np.sum(_maximum ** 2)
+        return np.sum(_maximum ** 2 * _ratio)
 
 
 def _l1svm_x(z, targets, predict=False, error=False, addon=0):
@@ -290,10 +351,18 @@ def _l1svm_x(z, targets, predict=False, error=False, addon=0):
     _targets[np.arange(n), targets] = 1
     _maximum = np.maximum(1 - z * _targets, 0)
     _indicator = _maximum > 0
+
+    # diff C for unbalance dataset
+    _positive = np.sum((_targets + 1.) / 2, axis=0)
+    _negtive = n - _positive
+    _ratio = (_negtive + 1) / (_positive + 1) / (m - 1)
+    _ratio = _ratio * _targets
+    _ratio = np.where(_ratio < 0, 1, _ratio)
+
     if error:
-        return np.sum(_maximum), -_targets * _indicator
+        return np.sum(_maximum * _ratio), -_targets * _indicator * _ratio
     else:
-        return np.sum(_maximum)
+        return np.sum(_maximum * _ratio)
 
 
 loss_table = {
