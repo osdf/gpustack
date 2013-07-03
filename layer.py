@@ -46,7 +46,7 @@ class Layer(object):
                 + params[self.m_end:])
 
     def fward_dropout(self, params, data):
-        return self.dropout * self.activ(gdot(data,\
+        return (1 - self.dropout) * self.activ(gdot(data,\
                 params[:self.m_end].reshape(self.shape)) + params[self.m_end:])
 
     def fprop(self, params, data):

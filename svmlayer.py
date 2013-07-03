@@ -13,13 +13,14 @@ import gnumpy as gpu
 
 
 from misc import diff_table, cpu_table, str_table, idnty
-from layer import layer
+from layer import Layer
 
 
 class SVMLayer(Layer):
     def __init__(self, shape, C, params=None, dropout=None, **kwargs):
-        super(SVMLayer, self).__init__(shape=shape, activ=idnty, params=params, dropout=dropout) 
+        super(SVMLayer, self).__init__(shape=shape, activ=idnty, params=params, dropout=dropout)
         self.C = C
+        print self.C
 
     def __repr__(self):
         if self.score is None:
@@ -40,7 +41,8 @@ class SVMLayer(Layer):
         # TODO: check next line, is it according 
         # to formula in the paper? delta must be
         # defined correctly!!
-        dE_da = delta * diff_table[self.activ](self.Z)
+        # self.C necessary? in loss Function, there is no C        
+        dE_da = self.C * delta * diff_table[self.activ](self.Z)
         # gradient of the bias
         grad[self.m_end:] = dE_da.sum(axis=0)
         # gradient of the weights, takes care of weight 'decay' factor (second addend)
@@ -72,16 +74,17 @@ class SVMLayer(Layer):
     def pt_score(self, params, inputs, targets, l2=0, **kwargs):
         Z = self.activ(gpu.dot(inputs, params[:self.m_end].reshape(self.shape)) + params[self.m_end:])
         sc = self.score(Z, targets)
+        # necessary? in loss Function, there is no C
+        sc = self.C * sc
         return sc
 
     def pt_grad(self, params, inputs, targets, l2=0, **kwargs):
         g = gzeros(params.shape)
-        
         Z = self.activ(gpu.dot(inputs, params[:self.m_end].reshape(self.shape)) + params[self.m_end:])
         _, delta = self.score(Z, targets, error=True)
-
-        g[:self.m_end] = gdot(inputs.T, delta).ravel()
-        
+        # necessary?
+        delta = self.C * delta
+        g[:self.m_end] = gdot(inputs.T, delta).ravel() + params[:self.m_end]
         g[self.m_end:] = delta.sum(axis=0)
         # clean up
         del delta
