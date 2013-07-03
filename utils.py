@@ -5,7 +5,7 @@
 
 import numpy as np
 import random
-from itertools import izip, cycle, repeat
+from itertools import izip, cycle, repeat, count
 import json
 
 
@@ -105,6 +105,12 @@ def lin_inc(frm, to, step, end):
 def const(const):
     while True:
         yield const
+
+
+def momentum_schedule(max_momentum):
+    while True:
+        m = 1 - (2 ** (-1 - np.log(np.floor_divide(i, 50) + 1, 2)))
+        yield min(m, max_momentum)
 
 
 def two_step(step_one, step_two):
