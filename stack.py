@@ -149,7 +149,6 @@ class Stack(list):
                 if (i+1) % peek_iv == 0:
                     for p in peeks:
                         prediction, inputs = peeks[p](self.params)
-                        print prediction.shape, inputs.shape
                         np.savez(peek_files[p], prediction, inputs)
                         pp = {"msg": "Writing peek file %s"%peek_files[p]}
                         munk.taggify(self.logging, "pretty").send(pp)

@@ -103,6 +103,7 @@ class Layer(object):
             self.SI = SI
             self.p[:self.m_end] = gpu.garray(init_SI(self.shape, sparsity=SI)).ravel()
         else:
+            self.SI = SI
             self.init_var = init_var
             self.p[:self.m_end] = init_var * gpu.randn(self.m_end)
         self.p[self.m_end:] = init_bias
