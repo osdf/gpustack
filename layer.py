@@ -94,14 +94,16 @@ class Layer(object):
 
     def transpose(self, params):
         T = Layer(shape=(self.shape[1], self.shape[0]), activ=None, params=params)
-        T.pt_init(score=None, init_var=None, init_bias=0, SI=self.SI)
+        T.pt_init(score=None, init_var=self.init_var, init_bias=0., SI=self.SI)
         return T
 
     def pt_init(self, score=None, init_var=1e-2, init_bias=0., SI=15, **kwargs):
         if init_var is None:
+            self.init_var = None
             self.SI = SI
             self.p[:self.m_end] = gpu.garray(init_SI(self.shape, sparsity=SI)).ravel()
         else:
+            self.init_var = init_var
             self.p[:self.m_end] = init_var * gpu.randn(self.m_end)
         self.p[self.m_end:] = init_bias
         self.score = score

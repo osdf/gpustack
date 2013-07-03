@@ -32,6 +32,8 @@ class DAE(Stack):
 
         p = self.params.as_numpy_array()
 
+        pretrained = schedule["pretrained"]
+
         # How many parameters in the unrolled model?
         _dec = []
         _enc = [0]
@@ -55,6 +57,8 @@ class DAE(Stack):
         self.decoder = []
         for layer, (c1, c2) in izip(self[-1::-1], izip(self.dec[:-1], self.dec[1:])):
             l = layer.transpose(self.params[c1:c2])
+            if pretrained:
+                l.p[:l.m_end] = layer.p[:layer.m_end].reshape(layer.shape).T.ravel()
             self.decoder.append(l)
 
         # Fix missing activations of decoder
@@ -75,7 +79,7 @@ class DAE(Stack):
         for layer, (c1, c2) in izip(self.decoder, izip(self.dec[:-1], self.dec[1:])):
             data = layer.fward(self.params[c1:c2], data)
 
-        return self._score(data, inputs)
+        return self._score(data, inputs, **kwargs)
 
     def fward(self, inputs, **kwargs):
         data = inputs

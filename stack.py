@@ -77,7 +77,7 @@ class Stack(list):
                 opt_schedule["f"] = layer.pt_score
                 opt_schedule["fprime"] = layer.pt_grad
 
-                opt, evals = prepare_opt(opt_schedule, pt_params, schedule, train, valid)
+                opt, evals, peeks = prepare_opt(opt_schedule, pt_params, schedule, train, valid)
 
                 stop = opt_schedule["stop"]
                 for j, info in enumerate(opt):
@@ -103,6 +103,7 @@ class Stack(list):
                 nxt = h5py.File(nxt_name)
                 pp = {"msg": "Take care of temporary " + nxt_name}
                 munk.taggify(self.logging, "pretty").send(pp)
+                # if a validation set is available, move it forward, too.
                 if valid:
                     valid[0] = self.next_hdf5(layer, valid[0], "validation", nxt, chunk=512)
                 train[0] = self.next_hdf5(layer, train[0], "train", nxt, chunk=512)
@@ -124,9 +125,17 @@ class Stack(list):
             opt_schedule["f"] = self.score
             opt_schedule["fprime"] = self.grad
 
-            opt, evals = prepare_opt(opt_schedule, self.params, schedule, train, valid)
+            opt, evals, peeks = prepare_opt(opt_schedule, self.params, schedule, train, valid)
 
             stop = opt_schedule["stop"]
+            if "peeks" in opt_schedule:
+                peek_iv = opt_schedule["peek_intervall"]
+                peek_files = {}
+                for p in opt_schedule["peeks"]:
+                    peek_files[p] = p + ".peek"
+            else:
+                peek_iv = epochs + 1
+
             for i, info in enumerate(opt):
                 if (i+1) % stop == 0:
                     for e in evals:
@@ -136,6 +145,15 @@ class Stack(list):
 
                 if i+1 == epochs:
                     break
+                
+                if (i+1) % peek_iv == 0:
+                    for p in peeks:
+                        prediction, inputs = peeks[p](self.params)
+                        print prediction.shape, inputs.shape
+                        np.savez(peek_files[p], prediction, inputs)
+                        pp = {"msg": "Writing peek file %s"%peek_files[p]}
+                        munk.taggify(self.logging, "pretty").send(pp)
+
         else:
             pp = {"msg": "NO FINETUNING of stack"}
             munk.taggify(self.logging, "pretty").send(pp)
@@ -144,7 +162,7 @@ class Stack(list):
         data = inputs
         for layer, (c1, c2) in izip(self, izip(self.cuts[:-1], self.cuts[1:])):
             data = layer.fward(self.params[c1:c2], data)
-        return self._score(data, targets)
+        return self._score(data, targets, **kwargs)
 
     def grad(self, params, inputs, targets, **kwargs):
         data = inputs

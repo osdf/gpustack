@@ -190,7 +190,7 @@ def prepare_opt(opt_schedule, wrt, schedule, train, valid):
     if "eval" not in opt_schedule:
         opt_schedule["eval"] = schedule["eval"]
 
-    evals = eval_opt(opt_schedule)
+    evals, peeks = eval_opt(opt_schedule)
 
     opt_keys = opt_schedule.keys()
     for arg in opt_schedule["iargs"]:
@@ -202,7 +202,7 @@ def prepare_opt(opt_schedule, wrt, schedule, train, valid):
     opt = opt_schedule["type"]
     opt_schedule["args"] = izip(iargs, ikwargs)
     opt = climin.util.optimizer(opt, wrt, **opt_schedule)
-    return opt, evals
+    return opt, evals, peeks
 
 
 def eval_opt(schedule):
@@ -211,8 +211,8 @@ def eval_opt(schedule):
         score = schedule["eval_score"]
     else:
         score = schedule["f"]
-    evals = {}
 
+    evals = {}
     for e in schedule["eval"]:
         args = []
         schedule["inputs"] = schedule[e][0]
@@ -232,7 +232,26 @@ def eval_opt(schedule):
             return acc
 
         evals[e] = loss
-    return evals
+
+    peeks = {}
+    if "peeks" in schedule:
+        N = schedule["peek_samples"]
+        tmp = schedule["btsz"]
+        schedule["btsz"] = N
+        for p in schedule["peeks"]:
+            args = []
+            schedule["inputs"] = schedule[p][0]
+            schedule["targets"] = schedule[p][1]
+            for arg in schedule["iargs"]:
+                args.append(finite_arg[arg](**schedule))
+            inputs = schedule["inputs"]
+            def peek(wrt, inputs=inputs, args=args):
+                samples = score(wrt, *[arg(0) for arg in args], predict=True)
+                return samples, inputs[:N]
+        peeks[p] = peek
+        schedule["btsz"] = tmp
+
+    return evals, peeks
 
 
 def replace_gnumpy_data(item):
