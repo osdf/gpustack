@@ -207,10 +207,9 @@ def prepare_opt(opt_schedule, wrt, schedule, train, valid):
 
 def eval_opt(schedule):
     btsz = schedule["btsz"]
+    scores = [schedule["f"]]
     if "eval_score" in schedule:
-        score = schedule["eval_score"]
-    else:
-        score = schedule["f"]
+        scores.append(schedule["eval_score"])
 
     evals = {}
     for e in schedule["eval"]:
@@ -222,13 +221,14 @@ def eval_opt(schedule):
         inputs = schedule["inputs"]
 
         def loss(wrt, inputs=inputs, args=args):
-            acc = 0
+            acc = [0] * len(scores)
             if type(inputs) is tuple:
                 N = inputs[0].shape[0]
             else:
                 N = inputs.shape[0]
             for idx in xrange(0, N - btsz + 1, btsz):
-                acc += score(wrt, *[arg(idx) for arg in args])
+                for j, score in enumerate(scores):
+                    acc[j] += score(wrt, *[arg(idx) for arg in args])
             return acc
 
         evals[e] = loss
@@ -246,7 +246,7 @@ def eval_opt(schedule):
                 args.append(finite_arg[arg](**schedule))
             inputs = schedule["inputs"]
             def peek(wrt, inputs=inputs, args=args):
-                samples = score(wrt, *[arg(0) for arg in args], predict=True)
+                samples = scores[0](wrt, *[arg(0) for arg in args], predict=True)
                 return samples, inputs[:N]
         peeks[p] = peek
         schedule["btsz"] = tmp

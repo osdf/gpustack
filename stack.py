@@ -125,6 +125,10 @@ class Stack(list):
             opt_schedule["f"] = self.score
             opt_schedule["fprime"] = self.grad
 
+            if "eval_score" in opt_schedule:
+                self._eval_score = opt_schedule["eval_score"]
+                opt_schedule["eval_score"] = self.evaluate_score
+
             opt, evals, peeks = prepare_opt(opt_schedule, self.params, schedule, train, valid)
 
             stop = opt_schedule["stop"]
@@ -175,6 +179,12 @@ class Stack(list):
             delta = layer.bprop(params=params[c1:c2], grad=g[c1:c2], delta=delta)
         return g
 
+    def evaluate_score(self, params, inputs, targets, **kwargs):
+        data = inputs
+        for layer, (c1, c2) in izip(self, izip(self.cuts[:-1], self.cuts[1:])):
+            data = layer.fward(self.params[c1:c2], data)
+        return self._eval_score(data, targets, **kwargs)
+
     def next_hdf5(self, layer, data, dname, nxt, chunk):
         """After pretraining one layer, move
         data to new temporary hdf5 store.
@@ -185,7 +195,7 @@ class Stack(list):
         for i in xrange(0, n, chunk):
             tmp[i:i+chunk] = layer._fward(data[i:i+chunk])
         return tmp
-        
+
     def _fward(self, data):
         for layer in self:
             data = layer._fward(data)

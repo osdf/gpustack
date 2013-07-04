@@ -20,7 +20,24 @@ def ssd(z, targets, weight=0.5, predict=False, error=False, addon=0):
         # rec. error + first deriv
         return weight*gpu.sum(err**2)/n + addon, 2.*weight*err/n
     else:
-        # only return reconstruction error 
+        # only return reconstruction error
+        return weight*gpu.sum(err**2)/n + addon
+
+
+def sig_ssd(z, targets, weight=0.5, predict=False, error=False, addon=0):
+    """
+    Sigmoid SSD.
+    """
+    bern = gpu.logistic(z)
+    if predict:
+        return bern
+    n, m = bern.shape
+    err = bern - targets
+    if error:
+        # rec. error + first deriv
+        return weight*gpu.sum(err**2)/n + addon, 2.*weight*err/n
+    else:
+        # only return reconstruction error
         return weight*gpu.sum(err**2)/n + addon
 
 

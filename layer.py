@@ -12,7 +12,7 @@ from gnumpy import zeros as gzeros
 import gnumpy as gpu
 
 
-from misc import diff_table, cpu_table, str_table
+from misc import diff_table, cpu_table, str_table, bernoulli
 from utils import init_SI
 
 
@@ -31,6 +31,7 @@ class Layer(object):
             self.fprop = self.fprop_dropout
             self.bprop = self.bprop_dropout
         elif dropout is not None:
+            assert(activ is bernoulli), "Spikey neurons need sigmoid."
             # negative dropout: want to have spikey neurons
             self.fprop = self.fprop_spike
 
