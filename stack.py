@@ -160,6 +160,10 @@ class Stack(list):
         else:
             pp = {"msg": "NO FINETUNING of stack"}
             munk.taggify(self.logging, "pretty").send(pp)
+        
+        _params = self.params.as_numpy_array().tolist()
+        info = dict(params=_params, shape=self)
+        log.send(info)
 
     def score(self, params, inputs, targets, **kwargs):
         data = inputs
