@@ -204,3 +204,12 @@ class Stack(list):
         for layer in self:
             data = layer._fward(data)
         return loss_table[self._score](data, targets=None, predict=True)
+
+    def _fward_layers(self, data, layers):
+        """
+        Only pass _data_ through _layers_ many layers.
+        No loss applied!.
+        """
+        for layer in self[:layers]:
+            data = layer._fward(data)
+        return data
