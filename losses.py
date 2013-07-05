@@ -49,7 +49,7 @@ def rmssd(z, targets, predict=False, error=False, addon=0):
         return z
     n, m = z.shape
     err = z - targets
-    per_sample = gpu.sqrt(gpu.sum(err**2, axis=1))
+    per_sample = gpu.sqrt(gpu.sum(err**2, axis=1) + 1e-8)
 
     if error:
         # rec. error + first deriv
