@@ -112,7 +112,6 @@ class DAE(Stack):
         _, delta = self._score(data, inputs, error=True)
 
         g = gzeros(self.psize)
-        
         for layer, (c1, c2) in izip(self.decoder[::-1], izip(self.dec[-2::-1], self.dec[:0:-1])):
             delta = layer.bprop(params=params[c1:c2], grad=g[c1:c2], delta=delta)
 

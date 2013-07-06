@@ -12,7 +12,7 @@ from gnumpy import zeros as gzeros
 import gnumpy as gpu
 
 
-from misc import diff_table, cpu_table, str_table, bernoulli
+from misc import diff_table, cpu_table, str_table
 from utils import init_SI
 
 
@@ -31,9 +31,10 @@ class Layer(object):
             self.fprop = self.fprop_dropout
             self.bprop = self.bprop_dropout
         elif dropout is not None:
-            assert(activ is bernoulli), "Spikey neurons need sigmoid."
+            assert(activ is gpu.logistic), "Spikey neurons need sigmoid."
             # negative dropout: want to have spikey neurons
             self.fprop = self.fprop_spike
+            self.fward = self.fward_spike
 
     def __repr__(self):
         if self.score is None:
@@ -49,6 +50,12 @@ class Layer(object):
     def fward_dropout(self, params, data):
         return (1 - self.dropout) * self.activ(gdot(data,\
                 params[:self.m_end].reshape(self.shape)) + params[self.m_end:])
+
+    def fward_spike(self, params, data):
+        Z = self.activ(gdot(data, params[:self.m_end].reshape(self.shape))\
+                + params[self.m_end:])
+        spike = Z > gpu.rand(Z.shape)
+        return spike
 
     def fprop(self, params, data):
         self.data = data
