@@ -162,7 +162,7 @@ class Stack(list):
             munk.taggify(self.logging, "pretty").send(pp)
         
         _params = self.params.as_numpy_array().tolist()
-        info = dict(params=_params, shape=self)
+        info = dict(params=_params, shape=self.__repr__())
         log.send(info)
 
     def score(self, params, inputs, targets, **kwargs):
