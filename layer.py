@@ -31,8 +31,10 @@ class Layer(object):
             self.fprop = self.fprop_dropout
             self.bprop = self.bprop_dropout
         elif dropout is not None:
+            assert(activ is gpu.logistic), "Spikey neurons need sigmoid."
             # negative dropout: want to have spikey neurons
             self.fprop = self.fprop_spike
+            self.fward = self.fward_spike
 
     def __repr__(self):
         if self.score is None:
@@ -48,6 +50,12 @@ class Layer(object):
     def fward_dropout(self, params, data):
         return (1 - self.dropout) * self.activ(gdot(data,\
                 params[:self.m_end].reshape(self.shape)) + params[self.m_end:])
+
+    def fward_spike(self, params, data):
+        Z = self.activ(gdot(data, params[:self.m_end].reshape(self.shape))\
+                + params[self.m_end:])
+        spike = Z > gpu.rand(Z.shape)
+        return spike
 
     def fprop(self, params, data):
         self.data = data
@@ -103,6 +111,7 @@ class Layer(object):
             self.SI = SI
             self.p[:self.m_end] = gpu.garray(init_SI(self.shape, sparsity=SI)).ravel()
         else:
+            self.SI = SI
             self.init_var = init_var
             self.p[:self.m_end] = init_var * gpu.randn(self.m_end)
         self.p[self.m_end:] = init_bias

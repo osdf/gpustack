@@ -81,6 +81,18 @@ class DAE(Stack):
 
         return self._score(data, inputs, **kwargs)
 
+    def evaluate_score(self, params, inputs, targets, **kwargs):
+        data = inputs
+        for layer, (c1, c2) in izip(self.encoder, izip(self.enc[:-1], self.enc[1:])):
+            data = layer.fward(self.params[c1:c2], data)
+
+        # possible spot for semi supervision?
+
+        for layer, (c1, c2) in izip(self.decoder, izip(self.dec[:-1], self.dec[1:])):
+            data = layer.fward(self.params[c1:c2], data)
+
+        return self._eval_score(data, inputs, **kwargs)
+
     def fward(self, inputs, **kwargs):
         data = inputs
         for layer, (c1, c2) in izip(self.encoder, izip(self.enc[:-1], self.enc[1:])):
@@ -100,7 +112,6 @@ class DAE(Stack):
         _, delta = self._score(data, inputs, error=True)
 
         g = gzeros(self.psize)
-        
         for layer, (c1, c2) in izip(self.decoder[::-1], izip(self.dec[-2::-1], self.dec[:0:-1])):
             delta = layer.bprop(params=params[c1:c2], grad=g[c1:c2], delta=delta)
 
