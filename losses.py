@@ -89,25 +89,27 @@ def l2svm_mia(z, targets, predict=False, error=False, addon=0):
     """
     if predict:
         # argmax_t(z*t)
-        t = z > 0
-        t = gpu.where(t == 0, -1, t)
+        t = 2 * (z > 0) - 1
         return t
 
-    _maximum = (1 - z * targets)
-    _maximum = gpu.where(_maximum < 0, 0, _maximum)
+    _value = (1 - z * targets)
+    maximum = (_value > 0) * _value
 
     # diff C for unbalance dataset
+    # automatically adjust weights inversely proportional to class frequencies
     n, _ = targets.shape
-    _positive = gpu.sum((targets + 1.) / 2, axis=0)
-    _negtive = n - _positive
-    _ratio = (_negtive + 1) / (_positive + 1)
-    _ratio = _ratio * targets
-    _ratio = gpu.where(_ratio < 0, 1, _ratio)
-
+    positive = gpu.sum((targets + 1.) / 2, axis=0)
+    negative = n - positive
+    inv_ne_freq = float(n) / (negative + 1)
+    inv_po_freq = float(n) / (positive + 1)
+    class_weight = inv_po_freq * (targets > 0) + inv_ne_freq * (targets < 0)
+    # binary hinge loss
+    bhl = gpu.sum(maximum ** 2 * class_weight)
     if error:
-        return gpu.sum(_maximum ** 2 * _ratio), -2 * targets * _maximum * _ratio
+        err = -2 * targets * maximum * class_weight
+        return bhl + addon, err
     else:
-        return gpu.sum(_maximum ** 2 * _ratio)
+        return bhl + addon
 
 
 def l1svm_mia(z, targets, predict=False, error=False, addon=0):
@@ -118,62 +120,60 @@ def l1svm_mia(z, targets, predict=False, error=False, addon=0):
     """
     if predict:
         # argmax_t(z*t)
-        t = z > 0
-        t = gpu.where(t == 0, -1, t)
+        t = 2 * (z > 0) - 1
         return t
 
-    _maximum = (1 - z * targets)
-    _maximum = gpu.where(_maximum < 0, 0, _maximum)
-    _indicator = _maximum > 0
-
+    _value = (1 - z * targets)
+    indicator = _value > 0
+    maximum = indicator * _value
     # diff C for unbalance dataset
+    # automatically adjust weights inversely proportional to class frequencies
     n, _ = targets.shape
-    _positive = gpu.sum((targets + 1.) / 2, axis=0)
-    _negtive = n - _positive
-    _ratio = (_negtive + 1) / (_positive + 1)
-    _ratio = _ratio * targets
-    _ratio = gpu.where(_ratio < 0, 1, _ratio)
-
+    positive = gpu.sum((targets + 1.) / 2, axis=0)
+    negative = n - positive
+    inv_ne_freq = float(n) / (negative + 1)
+    inv_po_freq = float(n) / (positive + 1)
+    class_weight = inv_po_freq * (targets > 0) + inv_ne_freq * (targets < 0)
+    bhl = gpu.sum(maximum * class_weight)
     if error:
-        return gpu.sum(_maximum * _ratio), -targets * _indicator * _ratio
+        err = -targets * indicator * class_weight
+        return bhl + addon, err
     else:
-        return gpu.sum(_maximum * _ratio)
+        return bhl + addon
 
 
 def l2svm_x(z, targets, predict=False, error=False, addon=0):
     """
     l2-SVM for the hinge loss, cross(mutual exclusive)
     addon, weight
-    Note: the targets here are (1, -1)
+    Note: the _targets here are (1, -1)
+    and targets are single numbers which indicate the class label
     """
     if predict:
         # argmax(z)
         return gpu.argmax(z, axis=1)
 
     n, m = z.shape
+    # _targets (1, -1)
     _targets = -1 * gpu.ones((n, m))
+    # targets only has one label for one data
     _targets[np.arange(n), targets] += 2
-    _maximum = (1 - z * _targets)
-    _maximum = gpu.where(_maximum < 0, 0, _maximum)
-
-    # diff C for unbalance dataset
-    _positive = gpu.sum((_targets + 1.) / 2, axis=0)
-    _negtive = n - _positive
-    _ratio = (_negtive + 1) / (_positive + 1) / (m - 1)
-    _ratio = _ratio * _targets
-    _ratio = gpu.where(_ratio < 0, 1, _ratio)
-
+    _value = (1 - z * _targets)
+    maximum = (_value > 0) * _value
+    xhl = gpu.sum(maximum ** 2)
     if error:
-        return gpu.sum(_maximum ** 2 * _ratio), -2 * _targets * _maximum * _ratio
+        err = -2 * _targets * maximum
+        return xhl + addon, err
     else:
-        return gpu.sum(_maximum ** 2 * _ratio)
+        return xhl + addon
 
 
 def l1svm_x(z, targets, predict=False, error=False, addon=0):
     """
     l1-SVM for the hinge loss, cross(mutual exclusive)
     addon, weight
-    Note: the targets here are (1, -1)
+    Note: the _targets here are (1, -1)
+    and targets are single numbers which indicate the class label
     """
     if predict:
         # argmax(z)
@@ -182,21 +182,15 @@ def l1svm_x(z, targets, predict=False, error=False, addon=0):
     n, m = z.shape
     _targets = -1 * gpu.ones((n, m))
     _targets[np.arange(n), targets] += 2
-    _maximum = (1 - z * _targets)
-    _maximum = gpu.where(_maximum < 0, 0, _maximum)
-    _indicator = _maximum > 0
-
-    # diff C for unbalance dataset
-    _positive = gpu.sum((_targets + 1.) / 2, axis=0)
-    _negtive = n - _positive
-    _ratio = (_negtive + 1) / (_positive + 1) / (m - 1)
-    _ratio = _ratio * _targets
-    _ratio = gpu.where(_ratio < 0, 1, _ratio)
-
+    _value = (1 - z * _targets)
+    indicator = _value > 0
+    maximum = indicator * _value
+    xhl = gpu.sum(maximum)
     if error:
-        return gpu.sum(_maximum * _ratio), -_targets * _indicator * _ratio
+        err = -_targets * indicator
+        return xhl + addon, err
     else:
-        return gpu.sum(_maximum * _ratio)
+        return xhl + addon
 
 
 def zero_one(z, targets):
@@ -267,24 +261,25 @@ def _l2svm_mia(z, targets, predict=False, error=False, addon=0):
     """
     if predict:
         # argmax_t(z*t)
-        t = z > 0
-        t = np.where(t == 0, -1, t)
+        t = 2 * (z > 0) - 1
         return t
 
-    _maximum = np.maximum(1 - z * targets, 0)
+    maximum = np.maximum(1 - z * targets, 0)
 
     # diff C for unbalance dataset
+    # automatically adjust weights inversely proportional to class frequencies
     n, _ = targets.shape
-    _positive = np.sum((targets + 1.) / 2, axis=0)
-    _negtive = n - _positive
-    _ratio = (_negtive + 1) / (_positive + 1)
-    _ratio = _ratio * targets
-    _ratio = np.where(_ratio < 0, 1, _ratio)
-
+    positive = np.sum((targets + 1.) / 2, axis=0)
+    negative = n - positive
+    inv_ne_freq = float(n) / (negative + 1)
+    inv_po_freq = float(n) / (positive + 1)
+    class_weight = inv_po_freq * (targets > 0) + inv_ne_freq * (targets < 0)
+    bhl = np.sum(maximum ** 2 * class_weight)
     if error:
-        return np.sum(_maximum ** 2 * _ratio), -2 * targets * _maximum * _ratio
+        err = -2 * targets * maximum * class_weight
+        return bhl + addon, err
     else:
-        return np.sum(_maximum ** 2 * _ratio)
+        return bhl + addon
 
 
 def _l1svm_mia(z, targets, predict=False, error=False, addon=0):
@@ -293,30 +288,32 @@ def _l1svm_mia(z, targets, predict=False, error=False, addon=0):
     """
     if predict:
         # argmax_t(z*t)
-        t = z > 0
-        t = np.where(t == 0, -1, t)
+        t = 2 * (z > 0) - 1
         return t
-
-    _maximum = np.maximum(1 - z * targets, 0)
-    _indicator = _maximum > 0
+    _value = 1 - z * _targets
+    indicator = _value > 0
+    maximum = indicator * _value
 
     # diff C for unbalance dataset
+    # automatically adjust weights inversely proportional to class frequencies
     n, _ = targets.shape
-    _positive = np.sum((targets + 1.) / 2, axis=0)
-    _negtive = n - _positive
-    _ratio = (_negtive + 1) / (_positive + 1)
-    _ratio = _ratio * targets
-    _ratio = np.where(_ratio < 0, 1, _ratio)
-
+    positive = np.sum((targets + 1.) / 2, axis=0)
+    negative = n - positive
+    inv_ne_freq = float(n) / (negative + 1)
+    inv_po_freq = float(n) / (positive + 1)
+    class_weight = inv_po_freq * (targets > 0) + inv_ne_freq * (targets < 0)
+    bhl = np.sum(maximum * class_weight)
     if error:
-        return np.sum(_maximum * _ratio), -targets * _indicator * _ratio
+        err = -targets * indicator * class_weight
+        return bhl + addon, err
     else:
-        return np.sum(_maximum * _ratio)
+        return bhl + addon
 
 
 def _l2svm_x(z, targets, predict=False, error=False, addon=0):
     """
-    Note: the targets here are (1, -1)
+    Note: the _targets here are (1, -1)
+    and targets are single numbers which indicate the class label
     """
     if predict:
         return np.argmax(z, axis=1)
@@ -324,24 +321,21 @@ def _l2svm_x(z, targets, predict=False, error=False, addon=0):
     n, m = z.shape
     _targets = -1 * np.ones((n, m))
     _targets[np.arange(n), targets] = 1
-    _maximum = np.maximum(1 - z * _targets, 0)
-
-    # diff C for unbalance dataset
-    _positive = np.sum((_targets + 1.) / 2, axis=0)
-    _negtive = n - _positive
-    _ratio = (_negtive + 1) / (_positive + 1) / (m - 1)
-    _ratio = _ratio * _targets
-    _ratio = np.where(_ratio < 0, 1, _ratio)
-
+    _value = 1 - z * _targets
+    indicator = _value > 0
+    maximum = indicator * _value
+    xhl = np.sum(maximum ** 2)
     if error:
-        return np.sum(_maximum ** 2 * _ratio), -2 * _targets * _maximum * _ratio
+        err = -2 * _targets * maximum
+        return xhl + addon, err
     else:
-        return np.sum(_maximum ** 2 * _ratio)
+        return xhl + addon
 
 
 def _l1svm_x(z, targets, predict=False, error=False, addon=0):
     """
-    Note: the targets here are (1, -1)
+    Note: the _targets here are (1, -1)
+    and targets are single numbers which indicate the class label
     """
     if predict:
         return np.argmax(z, axis=1)
@@ -349,20 +343,15 @@ def _l1svm_x(z, targets, predict=False, error=False, addon=0):
     n, m = z.shape
     _targets = -1 * np.ones((n, m))
     _targets[np.arange(n), targets] = 1
-    _maximum = np.maximum(1 - z * _targets, 0)
-    _indicator = _maximum > 0
-
-    # diff C for unbalance dataset
-    _positive = np.sum((_targets + 1.) / 2, axis=0)
-    _negtive = n - _positive
-    _ratio = (_negtive + 1) / (_positive + 1) / (m - 1)
-    _ratio = _ratio * _targets
-    _ratio = np.where(_ratio < 0, 1, _ratio)
-
+    _value = 1 - z * _targets
+    indicator = _value > 0
+    maximum = indicator * _value
+    xhl = np.sum(maximum)
     if error:
-        return np.sum(_maximum * _ratio), -_targets * _indicator * _ratio
+        err = -_targets * indicator
+        return xhl + addon, err
     else:
-        return np.sum(_maximum * _ratio)
+        return xhl + addon
 
 
 loss_table = {
