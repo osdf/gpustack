@@ -283,6 +283,19 @@ def load_params(fname):
     return d
 
 
+def load_sched(depot, folder, tag):
+    """
+    depot, abs path
+    """
+    import cPickle
+    from os.path import join
+    fname = join(depot, folder, tag + '.schedule')
+    sched_f = open(fname)
+    sched = cPickle.load(sched_f)
+    sched_f.close()
+    return sched
+
+
 def log_queue(log_to=None):
     if log_to:
         # standard logfile

@@ -160,7 +160,7 @@ class Stack(list):
         else:
             pp = {"msg": "NO FINETUNING of stack"}
             munk.taggify(self.logging, "pretty").send(pp)
-        
+
         _params = self.params.as_numpy_array().tolist()
         info = dict(params=_params, shape=self.__repr__())
         log.send(info)
@@ -213,3 +213,18 @@ class Stack(list):
         for layer in self[:layers]:
             data = layer._fward(data)
         return data
+
+    def reload(self, depot, folder, tag):
+        """
+        reload schedule and parameters from depot/folder/tag.params
+        depot, abs path
+        """
+        from utils import load_params
+        from os.path import join
+        from gnumpy import as_garray
+        file_prefix = join(depot, folder, tag)
+        params = load_params(file_prefix + ".params")
+        params_stack = params['Stack']['params']
+        self.params = as_garray(params_stack)
+        for layer, (c1, c2) in izip(self, izip(self.cuts[:-1], self.cuts[1:])):
+            layer.p = self.params[c1:c2]
