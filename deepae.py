@@ -109,3 +109,8 @@ class DAE(Stack):
         for layer, (c1, c2) in izip(self.encoder[::-1], izip(self.enc[-2::-1], self.enc[:0:-1])):
             delta = layer.bprop(params=params[c1:c2], grad=g[c1:c2], delta=delta)
         return g
+
+    def _fward(self, data):
+        for layer in self.encoder:
+            data = layer._fward(data)
+        return data
