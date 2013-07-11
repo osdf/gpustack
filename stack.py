@@ -125,6 +125,10 @@ class Stack(list):
             opt_schedule["f"] = self.score
             opt_schedule["fprime"] = self.grad
 
+            if "eval_score" in opt_schedule:
+                self._eval_score = opt_schedule["eval_score"]
+                opt_schedule["eval_score"] = self.evaluate_score
+
             opt, evals, peeks = prepare_opt(opt_schedule, self.params, schedule, train, valid)
 
             stop = opt_schedule["stop"]
@@ -149,7 +153,6 @@ class Stack(list):
                 if (i+1) % peek_iv == 0:
                     for p in peeks:
                         prediction, inputs = peeks[p](self.params)
-                        print prediction.shape, inputs.shape
                         np.savez(peek_files[p], prediction, inputs)
                         pp = {"msg": "Writing peek file %s"%peek_files[p]}
                         munk.taggify(self.logging, "pretty").send(pp)
@@ -157,6 +160,10 @@ class Stack(list):
         else:
             pp = {"msg": "NO FINETUNING of stack"}
             munk.taggify(self.logging, "pretty").send(pp)
+
+        _params = self.params.as_numpy_array().tolist()
+        info = dict(params=_params, shape=self.__repr__())
+        log.send(info)
 
     def score(self, params, inputs, targets, **kwargs):
         data = inputs
@@ -176,6 +183,12 @@ class Stack(list):
             delta = layer.bprop(params=params[c1:c2], grad=g[c1:c2], delta=delta)
         return g
 
+    def evaluate_score(self, params, inputs, targets, **kwargs):
+        data = inputs
+        for layer, (c1, c2) in izip(self, izip(self.cuts[:-1], self.cuts[1:])):
+            data = layer.fward(self.params[c1:c2], data)
+        return self._eval_score(data, targets, **kwargs)
+
     def next_hdf5(self, layer, data, dname, nxt, chunk):
         """After pretraining one layer, move
         data to new temporary hdf5 store.
@@ -186,8 +199,32 @@ class Stack(list):
         for i in xrange(0, n, chunk):
             tmp[i:i+chunk] = layer._fward(data[i:i+chunk])
         return tmp
-        
+
     def _fward(self, data):
         for layer in self:
             data = layer._fward(data)
         return loss_table[self._score](data, targets=None, predict=True)
+
+    def _fward_layers(self, data, layers):
+        """
+        Only pass _data_ through _layers_ many layers.
+        No loss applied!.
+        """
+        for layer in self[:layers]:
+            data = layer._fward(data)
+        return data
+
+    def reload(self, depot, folder, tag):
+        """
+        reload schedule and parameters from depot/folder/tag.params
+        depot, abs path
+        """
+        from utils import load_params
+        from os.path import join
+        from gnumpy import as_garray
+        file_prefix = join(depot, folder, tag)
+        params = load_params(file_prefix + ".params")
+        params_stack = params['Stack']['params']
+        self.params = as_garray(params_stack)
+        for layer, (c1, c2) in izip(self, izip(self.cuts[:-1], self.cuts[1:])):
+            layer.p = self.params[c1:c2]
