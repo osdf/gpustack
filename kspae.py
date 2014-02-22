@@ -8,20 +8,23 @@ k-sparse Autoencoder (kspae).
 from gnumpy import dot as gdot
 from gnumpy import zeros as gzeros
 import gnumpy as gpu
+import numpy as np
 
 
 from layer import Layer
-from misc import diff_table
+from misc import diff_table, idnty
 from utils import init_SI
 
 
 class KSpAE(Layer):
-    def __init__(self, shape, activ, params=None, **kwargs):
-        super(TAE, self).__init__(shape=shape, activ=activ, params=params)
+    def __init__(self, shape, k, alpha, activ=idnty, params=None, **kwargs):
+        super(KSpAE, self).__init__(shape=shape, activ=activ, params=params)
+        self.k = k
+        self.ak = alpha * k
 
     def __repr__(self):
         activ = str(self.activ).split()[1]
-        rep = "TAE-%s-%s"%(activ, self.shape)
+        rep = "KSpAE-%s-%s-%s-%s"%(activ, self.shape, self.k, self.ak)
         return rep
 
     def pt_init(self, score=None, init_var=1e-2, init_bias=0., l2=0., SI=15, **kwargs):
@@ -62,6 +65,7 @@ class KSpAE(Layer):
         g = gzeros(params.shape)
 
         hddn = self.activ(gpu.dot(inpts, params[:self.m_end].reshape(self.shape)) + params[self.m_end:self.m_end+self.shape[1]])
+        idxs = np.argsort(hddn.as_numpy_array(), axis=1)
         Z = gdot(hddn, params[:self.m_end].reshape(self.shape).T) + params[-self.shape[0]:]
 
         _, delta = self.score(Z, inpts, error=True)
