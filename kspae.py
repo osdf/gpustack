@@ -55,7 +55,10 @@ class KSpAE(Layer):
         # fprop in tied AE
         hddn = self.activ(gpu.dot(inpts, params[:self.m_end].reshape(self.shape)) + params[self.m_end:self.m_end+self.shape[1]])
         # get indices
-        idxs = np.argsort(hddn.as_numpy_array(), axis=1)
+        _hddn= hddn.as_numpy_array()
+        idxs = np.argsort(_hddn, axis=1)
+        _hddn[range(_hddn.shape[0]), idxs[:, self.ak:].T] = 0
+        hddn = gpu.garray(_hddn)
         Z = gdot(hddn, params[:self.m_end].reshape(self.shape).T) + params[-self.shape[0]:]
 
         sc = self.score(Z, inpts)
