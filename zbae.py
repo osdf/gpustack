@@ -1,7 +1,7 @@
 """
 A layer that can be _pretrained_ in
 an unsupervised way using a 
-k-sparse Autoencoder (kspae).
+zero-bias autoencoder (ZAE)
 """
 
 
@@ -16,7 +16,7 @@ from misc import diff_table, idnty
 from utils import init_SI
 
 
-class KSpAE(Layer):
+class ZAE(Layer):
     def __init__(self, shape, theta, activ=idnty, params=None, **kwargs):
         super(KSpAE, self).__init__(shape=shape, activ=activ, params=params)
         self.theta = theta

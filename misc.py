@@ -30,6 +30,19 @@ def idnty(x):
     """
     return x
 
+
+def trec(x, theta):
+    """
+    """
+    pass
+
+
+def tlin(x, theta):
+    """
+    """
+    pass
+
+
 def Didnty(ix):
     """
     First derivative of ix=idnty(x)
