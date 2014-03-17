@@ -12,13 +12,13 @@ import numpy as np
 
 
 from layer import Layer
-from misc import diff_table, idnty
+from misc import diff_table, tlin
 from utils import init_SI
 
 
 class ZAE(Layer):
-    def __init__(self, shape, theta, activ=idnty, params=None, **kwargs):
-        super(KSpAE, self).__init__(shape=shape, activ=activ, params=params)
+    def __init__(self, shape, theta, activ=tlin, params=None, **kwargs):
+        super(ZAE, self).__init__(shape=shape, activ=activ, params=params)
         self.theta = theta
 
     def __repr__(self):
@@ -63,7 +63,6 @@ class ZAE(Layer):
 
         hddn = self.activ(gpu.dot(inpts, params[:self.m_end].reshape(self.shape)) + params[self.m_end:self.m_end+self.shape[1]])
         _hddn= hddn.as_numpy_array()
-        idxs = np.argsort(_hddn, axis=1)
         _hddn[range(_hddn.shape[0]), idxs[:, self.ak:].T] = 0
         hddn = gpu.garray(_hddn)
         Z = gdot(hddn, params[:self.m_end].reshape(self.shape).T) + params[-self.shape[0]:]

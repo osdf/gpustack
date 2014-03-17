@@ -33,14 +33,27 @@ def idnty(x):
 
 def trec(x, theta):
     """
+    Truncated linear unit.
     """
-    pass
+    return x*(x>theta)
+
+
+def Dtrec(x, theta):
+    """
+    """
+    return 1*(x>theta)
 
 
 def tlin(x, theta):
     """
     """
-    pass
+    return x*((x*x) > theta)
+
+
+def Dtlin(x, theta):
+    """
+    """
+    return 1*((x*x) > theta)
 
 
 def Didnty(ix):
@@ -149,6 +162,8 @@ diff_table = {
         ,gpu.tanh: Dtanh
         ,idnty: Didnty
         ,relu: Drelu
+        ,tlin: Dtlin
+        ,trec: Dtrec
         }
 
 
