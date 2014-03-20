@@ -51,7 +51,7 @@ class ZAE(Layer):
 
     def pt_score(self, params, inpts, **kwargs):
         # fprop in tied AE
-        hddn = self.activ(gpu.dot(inpts, params[:self.m_end].reshape(self.shape)) + params[self.m_end:self.m_end+self.shape[1]])
+        hddn = self.activ(gpu.dot(inpts, params[:self.m_end].reshape(self.shape)))
         # get indices
         Z = gdot(hddn, params[:self.m_end].reshape(self.shape).T) + params[-self.shape[0]:]
 
@@ -61,10 +61,7 @@ class ZAE(Layer):
     def pt_grad(self, params, inpts, **kwargs):
         g = gzeros(params.shape)
 
-        hddn = self.activ(gpu.dot(inpts, params[:self.m_end].reshape(self.shape)) + params[self.m_end:self.m_end+self.shape[1]])
-        _hddn= hddn.as_numpy_array()
-        _hddn[range(_hddn.shape[0]), idxs[:, self.ak:].T] = 0
-        hddn = gpu.garray(_hddn)
+        hddn = self.activ(gpu.dot(inpts, params[:self.m_end].reshape(self.shape)))
         Z = gdot(hddn, params[:self.m_end].reshape(self.shape).T) + params[-self.shape[0]:]
 
         _, delta = self.score(Z, inpts, error=True)
