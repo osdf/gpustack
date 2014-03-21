@@ -20,6 +20,7 @@ class ZAE(Layer):
     def __init__(self, shape, theta, activ=tlin, params=None, **kwargs):
         super(ZAE, self).__init__(shape=shape, activ=activ, params=params)
         self.theta = theta
+        self.size = self.m_end
 
     def __repr__(self):
         activ = str(self.activ).split()[1]
@@ -27,7 +28,7 @@ class ZAE(Layer):
         return rep
 
     def pt_init(self, score=None, init_var=1e-2, init_bias=0., l2=0., SI=15, **kwargs):
-        pt_params = gzeros(self.m_end + self.shape[1] + self.shape[0])
+        pt_params = gzeros(self.m_end + self.shape[0])
         if init_var is None:
             pt_params[:self.m_end] = gpu.garray(init_SI(self.shape, sparsity=SI)).ravel()
         else:
@@ -51,7 +52,7 @@ class ZAE(Layer):
 
     def pt_score(self, params, inpts, **kwargs):
         # fprop in tied AE
-        hddn = self.activ(gpu.dot(inpts, params[:self.m_end].reshape(self.shape)))
+        hddn = self.activ(gpu.dot(inpts, params[:self.m_end].reshape(self.shape)), self.theta)
         # get indices
         Z = gdot(hddn, params[:self.m_end].reshape(self.shape).T) + params[-self.shape[0]:]
 
@@ -61,7 +62,7 @@ class ZAE(Layer):
     def pt_grad(self, params, inpts, **kwargs):
         g = gzeros(params.shape)
 
-        hddn = self.activ(gpu.dot(inpts, params[:self.m_end].reshape(self.shape)))
+        hddn = self.activ(gpu.dot(inpts, params[:self.m_end].reshape(self.shape)), self.theta)
         Z = gdot(hddn, params[:self.m_end].reshape(self.shape).T) + params[-self.shape[0]:]
 
         _, delta = self.score(Z, inpts, error=True)
@@ -73,7 +74,25 @@ class ZAE(Layer):
 
         g[:self.m_end] += gdot(inpts.T, dsc_dha).ravel()
 
-        g[self.m_end:-self.shape[0]] = dsc_dha.sum(axis=0)
         # clean up
         del delta
         return g
+
+    def fward(self, params, data):
+        return self.activ(gdot(data, params[:self.m_end].reshape(self.shape)))
+
+    def fprop(self, params, data):
+        self.data = data
+        self.Z = self.activ(gdot(data, params[:self.m_end].reshape(self.shape)), self.theta)
+        return self.Z
+
+    def bprop(self, params, grad, delta):
+        dE_da = delta * diff_table[self.activ](self.Z, self.theta)
+        # gradient of the bias
+        grad[self.m_end:] = dE_da.sum(axis=0)
+        # gradient of the weights
+        grad[:self.m_end] = gdot(self.data.T, dE_da).ravel()
+        # backpropagate the delta
+        delta = gdot(dE_da, params[:self.m_end].reshape(self.shape).T)
+        del self.Z
+        return delta
