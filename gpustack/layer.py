@@ -25,7 +25,7 @@ class Layer(object):
         self.size = shape[0] * shape[1] + shape[1]
         self.cpuify = False
         if dropout is not None and dropout > 0:
-            assert(0 < dropout < 1), "Dropout needs to be in (0,1)."
+            assert(0 < dropout < 1), "Dropout needs to be in (0, 1)."
             self.dropout = dropout
             self.fward = self.fward_dropout
             self.fprop = self.fprop_dropout
